@@ -12,6 +12,7 @@ A very light layer over Java interop for working with TensorFlow.
 
 ;; Run operations
 (run/session-run [blah])
+;; => [0 1 2 3 4]
 ```
 
 ## Usage
