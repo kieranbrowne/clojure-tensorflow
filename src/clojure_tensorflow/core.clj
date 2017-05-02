@@ -46,6 +46,11 @@
      (doseq [op (butlast ops)]
        (op-run op))
 
-     ;; run final op and return value
-     (utils/tensor->clj
-      (op-run (last ops))))))
+     ;; run final op
+     (let [result
+           (utils/tensor->clj
+            (op-run (last ops)))]
+       ;; close session to free up memory
+       (.close session)
+       ;; return result
+       result))))

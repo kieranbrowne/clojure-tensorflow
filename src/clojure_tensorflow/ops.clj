@@ -1,7 +1,8 @@
 (ns clojure-tensorflow.ops
   (:require
    [clojure-tensorflow.build :as build :refer [op-builder]]
-   [clojure-tensorflow.utils :as utils]))
+   [clojure-tensorflow.utils :as utils]
+   [clojure-tensorflow.ops :as tf]))
 
 (defn global-variables-initializer []
   @build/global-variables)
@@ -109,4 +110,5 @@
 (defn matmul [a b]
   (op-builder
    {:operation "MatMul"
-    :inputs [a b]}))
+    :inputs [a b]})
+  )
