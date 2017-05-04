@@ -23,7 +23,7 @@ A very light layer over Java interop for working with TensorFlow.
 
 ### 1. Add this library your dependencies in project.clj
 
-[![Clojars Project](https://img.shields.io/clojars/v/org.clojars.kieran/clojure-tensorflow.svg)](https://clojars.org/org.clojars.kieran/clojure-tensorflow)
+[![Clojars Project](https://img.shields.io/clojars/v/clojure-tensorflow.svg)](https://clojars.org/clojure-tensorflow)
 
 ### 2. Add a version of TensorFlow to your dependencies
 
