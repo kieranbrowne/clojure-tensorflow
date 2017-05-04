@@ -1,4 +1,4 @@
-(defproject org.clojars.kieran/clojure-tensorflow "0.1.0-SNAPSHOT"
+(defproject org.clojars.kieran/clojure-tensorflow "0.1.0"
   :description "A very light layer over Java interop for working with TensorFlow"
   :url "http://github.com/kieranbrowne/clojure-tensorflow"
   :license {:name "Eclipse Public License"

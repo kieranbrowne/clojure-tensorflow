@@ -3,7 +3,6 @@
             [clojure-tensorflow.ops :as tf]
             [clojure-tensorflow.utils :as utils]))
 
-
 (defn session
   "Create a session"
   ([graph] (new org.tensorflow.Session graph))
