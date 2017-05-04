@@ -112,3 +112,31 @@
    {:operation "MatMul"
     :inputs [a b]})
   )
+
+
+;; Gradients
+(defn numerical-gradient
+  "Calculate the approximate gradient of function with respect to x
+  This is best used for testing differentiated gradients."
+  ([func x accuracy]
+   (tf/div
+    (tf/sub
+     (func (tf/add x accuracy))
+     (func x))
+    accuracy)
+    )
+  ([func x] (numerical-gradient func x (tf/constant 0.000001))))
+
+
+;; Optimizers
+
+;; I'm going to take the dodgy route for now and just use
+;; numerical gradients.
+;; TODO: Replace with computed gradients
+(defn gradient-descent [target coefficient minimize]
+  (tf/assign
+   target
+   (tf/sub target
+           (tf/matmul
+            (tf/transpose coefficient)
+            (tf/numerical-gradient minimize target)))))
