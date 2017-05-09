@@ -3,52 +3,40 @@
             [clojure-tensorflow.core :refer :all]
             [clojure-tensorflow.ops :as tf]
             [clojure-tensorflow.build :as build]
+            [clojure-tensorflow.gradients :as tf.optimizers]
             ))
 
 (deftest test-session-running
   (testing "Run simple graph"
     (is (= (session-run [(tf/constant [1])])
-           [1])))
-  )
+           [1]))))
 
-(deftest test-gradients
-  (let [var-two (tf/variable 2.)
-        three-pow-two (tf/pow (tf/constant 3.) var-two)]
-    (testing "Get gradient for Pow"
-      (is (= (session-run [(tf/global-variables-initializer)
-                           (tf/gradients three-pow-two var-two)])
-             6.)))
+(deftest test-basic-feed-forward-neural-network
+  (let [input (tf/constant [[1. 0. 1.]])
+        output (tf/constant [[0.5]])
+        weights (tf/variable [[0.08] [-0.65] [0.44]])
+        model (tf/sigmoid (tf/matmul input weights))
+        cost (tf/sub output model)]
+
+    (testing "Constant input"
+      (is (= (session-run [input]) [[1. 0. 1.]])))
+
+    (testing "Global variables initializer"
+      (is (= (session-run
+              [(tf/global-variables-initializer)
+               weights
+               ]) (map (partial map float) [[0.08] [-0.65] [0.44]]))))
+
+    (testing "Compute gradients"
+      (is (= (session-run
+              [(tf/global-variables-initializer)
+               (tf.optimizers/gradients cost weights)
+               ]) (map (partial map float) [[0.24960001 0.0 0.24960001]]))))
+
+    (testing "Gradient decent"
+      (is (= (session-run
+              [(tf/global-variables-initializer)
+               (tf.optimizers/gradient-descent cost weights)
+               cost
+               ]) [[(float -0.00519979)]])))
     ))
-
-(def input (tf/constant [[1. 0. 1.]]))
-(def output (tf/constant [[0.5]]))
-
-(def weights (tf/variable (repeatedly 3 #(vector (dec (* 2 (rand)))))))
-
-(def model (tf/sigmoid (tf/matmul input weights)))
-
-(def cost (tf/sub output model))
-
-(session-run
- [(tf/global-variables-initializer)
-  cost])
-
-(session-run
- [(tf/global-variables-initializer)
-  (tf/gradients cost weights)])
-
-(session-run
- [(tf/global-variables-initializer)
-  ;; (tf/assign weights (tf/sub weights (tf/transpose (tf/gradients cost weights))))
-  cost
-  ])
-
-(session-run
- [(tf/global-variables-initializer)
-  (tf/numerical-gradients cost weights)
-  ])
-
-(session-run
- [(tf/get-registered-gradient (tf/sigmoid (tf/constant 9.)))])
-
-()
