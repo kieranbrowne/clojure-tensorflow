@@ -88,6 +88,11 @@
    {:operation "Pow"
     :inputs [a b]}))
 
+(defn log [a]
+  (op-builder
+   {:operation "Log"
+    :inputs [a]}))
+
 (defn size [a]
   (op-builder
    {:operation "Size"
