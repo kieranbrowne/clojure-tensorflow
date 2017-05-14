@@ -129,17 +129,14 @@
                            [1.]
                            [1.]
                            [0.]])
-      syn-0 (tf/variable (repeatedly 3 #(vector (dec (* 2 (rand))))))
+      syn-0 (tf/variable (repeatedly 3 #(vector (dec (* 2 (.nextDouble (java.util.Random. 1)))))))
       network (tf/sigmoid (tf/matmul input syn-0))
       error (tf/pow (tf/sub target network) (tf/constant 2.))]
   (session-run
    [(tf/global-variables-initializer)
-    ;; (tf.optimizers/gradient-descent error syn-0)
-    (repeat 900 (tf.optimizers/gradient-descent error syn-0))
+    (repeat 90 (tf.optimizers/gradient-descent error syn-0))
     (tf/mean error)
-    network
-    ])
-  )
+    ]))
 
 
 (let [input (tf/constant [[1. 0. 1.]
@@ -150,7 +147,7 @@
                            [1.]
                            [1.]
                            [0.]])
-      rand-synapse (fn [] (dec (* 2 (rand))))
+      rand-synapse (fn [] (dec (* 2 (.nextDouble (java.util.Random. 1)))))
       syn-0 (tf/variable (repeatedly 3 #(repeatedly 4 rand-synapse)))
       syn-1 (tf/variable (repeatedly 4 #(repeatedly 1 rand-synapse)))
       hidden-layer (tf/sigmoid (tf/matmul input syn-0))
@@ -158,10 +155,10 @@
       error (tf/pow (tf/sub target output-layer) (tf/constant 2.))]
   (session-run
    [(tf/global-variables-initializer)
-    ;; (tf.optimizers/gradient-descent error syn-0)
-    (repeat 90 (tf.optimizers/gradient-descent error syn-1))
-    (repeat 90 (tf.optimizers/gradient-descent error syn-0))
-    ;; output-layer
+
+    (repeat 1100 (tf.optimizers/gradient-descent error syn-1 syn-0))
+
     (tf/mean error)
+
     ])
   )
