@@ -125,40 +125,41 @@
                           [1. 1. 0.]
                           [0. 1. 1.]
                           [0. 0. 1.]])
-      target (tf/constant [[0.]
-                           [1.]
-                           [1.]
-                           [0.]])
-      syn-0 (tf/variable (repeatedly 3 #(vector (dec (* 2 (.nextDouble (java.util.Random. 1)))))))
+      target (tf/constant [[0. 0.]
+                           [1. 0.]
+                           [1. 0.]
+                           [0. 0.]])
+      rand-seed (java.util.Random. 1)
+      rand-synapse #(dec (* 2 (.nextDouble rand-seed)))
+      syn-0 (tf/variable (repeatedly 3 #(repeatedly 2 rand-synapse)))
       network (tf/sigmoid (tf/matmul input syn-0))
       error (tf/pow (tf/sub target network) (tf/constant 2.))]
   (session-run
    [(tf/global-variables-initializer)
-    (repeat 90 (tf.optimizers/gradient-descent error syn-0))
-    (tf/mean error)
+    (repeat 700 (tf.optimizers/gradient-descent error syn-0))
+    (tf/mean (tf/mean error))
     ]))
 
 
-(let [input (tf/constant [[1. 0. 1.]
-                          [1. 1. 0.]
+(let [input (tf/constant [[1. 1. 1.]
+                          [1. 0. 1.]
                           [0. 1. 1.]
                           [0. 0. 1.]])
       target (tf/constant [[0.]
                            [1.]
                            [1.]
                            [0.]])
-      rand-synapse (fn [] (dec (* 2 (.nextDouble (java.util.Random. 1)))))
-      syn-0 (tf/variable (repeatedly 3 #(repeatedly 4 rand-synapse)))
-      syn-1 (tf/variable (repeatedly 4 #(repeatedly 1 rand-synapse)))
+      rand-seed (java.util.Random. 1)
+      rand-synapse #(dec (* 2 (.nextDouble rand-seed)))
+      syn-0 (tf/variable (repeatedly 3 #(repeatedly 5 rand-synapse)))
+      syn-1 (tf/variable (repeatedly 5 #(repeatedly 1 rand-synapse)))
       hidden-layer (tf/sigmoid (tf/matmul input syn-0))
-      output-layer (tf/sigmoid (tf/matmul hidden-layer syn-1))
-      error (tf/pow (tf/sub target output-layer) (tf/constant 2.))]
+      network (tf/sigmoid (tf/matmul hidden-layer syn-1))
+      error (tf/pow (tf/sub target network) (tf/constant 2.))]
   (session-run
    [(tf/global-variables-initializer)
-
-    (repeat 1100 (tf.optimizers/gradient-descent error syn-1 syn-0))
-
+    (repeat 700 (tf.optimizers/gradient-descent error syn-0 syn-1))
     (tf/mean error)
-
     ])
   )
+

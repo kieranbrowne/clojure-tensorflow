@@ -118,6 +118,14 @@
    {:operation "MatMul"
     :inputs [a b]}))
 
+(defn dot [a b]
+  (op-builder
+   {:operation "MatMul"
+    :inputs [a b]
+    :attrs {:transpose_a true :transpose_b false}
+    }))
+
+
 (defn identity [a]
   (op-builder
    {:operation "Identity"
