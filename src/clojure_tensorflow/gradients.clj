@@ -3,9 +3,7 @@
    [clojure-tensorflow.build :as build]
    [clojure-tensorflow.utils :as utils]
    [clojure-tensorflow.ops :as ops]
-   [clojure-tensorflow.gradients :as tf.optimizers]
-
-   [clojure-tensorflow.ops :as tf]))
+   ))
 
 
 (defn get-op-by-name [n]
@@ -18,7 +16,6 @@
   (or (some #(= independent %) (get-inputs dependent))
       (some (partial depends-on? independent) (get-inputs dependent))
       (= dependent independent)))
-
 
 (defn get-registered-gradient
   ([node ]
@@ -71,18 +68,8 @@
   [from to]
   (let [paths (atom [])]
     (collate-paths from to paths [])
-    @paths
-    ))
+    @paths))
 
-
-(defn add-positions [path]
-     (map
-      (fn [i]
-        {:which #(nth %
-                      (.indexOf (get-inputs
-                                 (nth path (max (count path) (inc i))))
-                                (nth path i)))
-         :output (nth path i)}) (range (count path))))
 
 (defn gradients
   "The symbolic gradient of y with respect to x.
@@ -94,12 +81,10 @@
          (reduce ops/add
                  (map
                   (comp
-                   ;; #(case (.numDimensions (.shape %)) 2 (ops/sum %) %)
-                   #(reduce (fn [gradient node]
+                   (partial reduce (fn [gradient node]
                               ((:chain-fn node)
-                               (tf.optimizers/get-registered-gradient node) gradient)
-                              )
-                            (ops/constant 1.) %))
+                               (get-registered-gradient node) gradient))
+                            (ops/constant 1.)))
                   (paths y x))))
        xs))
 
@@ -112,18 +97,9 @@
    (ops/sub
     (ops/add (first xs) (ops/constant 0.000001))
     (first xs))
-   (ops/constant 0.000001))
-  )
+   (ops/constant 0.000001)))
 
 (defn apply-gradients
   [xs gradients]
   (map #(ops/assign %1 (ops/sub %1 %2))
        xs gradients))
-
-
-;; Optimizers
-
-(defn gradient-descent
-  "The very simplest optimizer."
-  [cost-fn & weights]
-  (apply-gradients weights (apply gradients (cons cost-fn weights))))
