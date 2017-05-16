@@ -1,8 +1,9 @@
 (ns shallow-neural-network.core
   (:require [clojure-tensorflow.ops :as tf]
+            [clojure-tensorflow.optimizers :as optimizers]
             [clojure-tensorflow.core :as run]))
 
-;;;;;;;;;;;; TRAINING DATA ;;;;;;;;;;;;;;;
+;;;;;;;;;;;; Training Data ;;;;;;;;;;;;;;;
 
 (def training-data
   ;; input => output
@@ -15,44 +16,42 @@
 (def outputs (tf/constant (take-nth 2 (rest training-data))))
 
 
-;;;;;;;;;;; VARIABLE WEIGHTS ;;;;;;;;;;;;;
+;;;;;;;;;;; Variable Weights ;;;;;;;;;;;;;
 
 (def weights
   "Initialise weights as variable tensor of values between -1 and 1"
   (tf/variable
    (repeatedly 3 (fn [] (repeatedly 1 #(dec (rand 2)))))))
 
-;;;;;;;;;; DEFINE OUR NETWORK ;;;;;;;;;;;;
+;;;;;;;;;; Define Our Network ;;;;;;;;;;;;
 
-(defn network [weights]
+(def network
   (tf/sigmoid (tf/matmul inputs weights)))
 
-(defn error [weights]
+(def error
   (tf/div
    (tf/pow
-    (tf/sub outputs (network weights))
+    (tf/sub outputs network)
     (tf/constant 2.))
    (tf/constant 2.)))
 
 
+;;;;;;;;; Testing Our Network ;;;;;;;;;;;;
 
-;;;;;;;;; TESTING OUR NETWORK ;;;;;;;;;;;;
 ;; Errors without training
-
 (run/session-run
  [(tf/global-variables-initializer)
-  (tf/mean (error weights))])
+  (tf/mean error)])
 ;; => [0.14975819]
-
 ;; The mean error is too damn high
 
 
-;;;;;;;;;; GRADIENT DESCENT ;;;;;;;;;;;;;;
+;;;;;;;;;; Gradient Descent ;;;;;;;;;;;;;;
 
 (run/session-run
  [(tf/global-variables-initializer)
-  (repeat 1000 (tf/gradient-descent weights inputs error))
-  (tf/mean (error weights))])
+  (repeat 1000 (optimizers/gradient-descent error weights))
+  (tf/mean error)])
 ;; => [2.1348597E-4]
 
 ;; The mean error is now sufficiently small.
