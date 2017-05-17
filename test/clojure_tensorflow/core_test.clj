@@ -79,6 +79,12 @@
                (tf.gradients/gradients cost weights)
                ]) (map (partial map float) [[-0.23383345] [0.0] [-0.23383345]]))))
 
+    (testing "Compute gradients without supplying the relevant variables"
+      (is (= (session-run
+              [(tf/global-variables-initializer)
+               (tf.gradients/gradients cost)
+               ]) (map (partial map float) [[-0.23383345] [0.0] [-0.23383345]]))))
+
     (testing "Gradient decent"
       (is (= (session-run
               [(tf/global-variables-initializer)

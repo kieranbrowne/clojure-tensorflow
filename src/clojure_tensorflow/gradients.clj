@@ -70,23 +70,33 @@
     (collate-paths from to paths [])
     @paths))
 
+(defn relevant-variables [op]
+  (filter #(clojure-tensorflow.gradients/depends-on? % op)
+          (map :tf-op
+               (filter
+                #(= (:operation %) "Variable")
+                @build/shadow-graph))
+          )
+  )
+
+(defn gradient [y x]
+  (reduce
+   ops/add
+   (map
+    (partial reduce
+             (fn [gradient node]
+               ((:chain-fn node)
+                (get-registered-gradient node) gradient))
+             (ops/constant 1.))
+    (paths y x))))
 
 (defn gradients
-  "The symbolic gradient of y with respect to x.
+  "The symbolic gradient of y with respect to xs.
   For example, if we wanted to calculate the gradient of our
   cost function with respect to our weight, we could use
   `(gradients cost weights)`."
-  [y & xs]
-  (map (fn [x]
-         (reduce ops/add
-                 (map
-                  (comp
-                   (partial reduce (fn [gradient node]
-                              ((:chain-fn node)
-                               (get-registered-gradient node) gradient))
-                            (ops/constant 1.)))
-                  (paths y x))))
-       xs))
+  ([y & xs] (map (partial gradient y) xs))
+  ([y] (apply (partial gradients y) (relevant-variables y))))
 
 
 (defn numerical-gradients

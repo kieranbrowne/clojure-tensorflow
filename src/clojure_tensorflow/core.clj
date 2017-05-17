@@ -54,4 +54,3 @@
        (.close session)
        ;; return result
        result))))
-

@@ -18,21 +18,23 @@
   ([op-profile graph]
    (let [{:keys [operation node-name attrs inputs]
           :or {node-name (str (gensym operation)) attrs {} inputs []}
-          } op-profile]
-     (swap! shadow-graph conj (assoc op-profile :name node-name :attrs attrs :inputs inputs))
-     (utils/thread graph
-                   (flatten
-                    [#(.opBuilder % operation node-name)
-                     ;; set attributes if any
-                     (map
-                      (fn [attr]
-                        #(.setAttr % (name (first attr)) (second attr)))
-                      attrs)
-                     ;; add inputs if any
-                     (map (fn [input]
-                            #(.addInput %
-                                        (if (fn? input) (input graph) input)
-                                        )) inputs)
-                     #(.build %)
-                     #(.output % 0)])))))
+          } op-profile
+         tf-operation (utils/thread graph
+                       (flatten
+                        [#(.opBuilder % operation node-name)
+                         ;; set attributes if any
+                         (map
+                          (fn [attr]
+                            #(.setAttr % (name (first attr)) (second attr)))
+                          attrs)
+                         ;; add inputs if any
+                         (map (fn [input]
+                                #(.addInput %
+                                            (if (fn? input) (input graph) input)
+                                            )) inputs)
+                         #(.build %)
+                         #(.output % 0)]))
+         ]
+     (swap! shadow-graph conj (assoc op-profile :name node-name :attrs attrs :inputs inputs :tf-op tf-operation))
+     tf-operation)))
 
