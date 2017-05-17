@@ -205,16 +205,3 @@
            0.001)))
 
     ))
-
-
-;; (def thingy-a  (tf/constant [[1 2 3] [4 5 6]]))
-;; (def thingy-b  (tf/constant [[1 2 3] [4 5 6]]))
-;; (def reverse-a tf/dot)
-;; (def reverse-b (fn [a b] (tf/transpose (tf/matmul a (tf/transpose b)))))
-
-;; (=
-;;  (session-run
-;;   [(reverse-b thingy-b thingy-a)])
-;;  (session-run
-;;   [(tf/dot_b thingy-a thingy-b)])
-;;  )

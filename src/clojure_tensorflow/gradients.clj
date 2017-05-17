@@ -2,9 +2,7 @@
   (:require
    [clojure-tensorflow.build :as build]
    [clojure-tensorflow.utils :as utils]
-   [clojure-tensorflow.ops :as ops]
-
-   [clojure-tensorflow.ops :as tf]))
+   [clojure-tensorflow.ops :as ops]))
 
 
 (defn get-op-by-name [n]
