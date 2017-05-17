@@ -27,7 +27,7 @@ A very light layer over Java interop for working with TensorFlow.
 ;; Train Network
 (session-run
  [(tf/global-variables-initializer)
-  (repeat 1000 (optimizers/gradient-descent error syn-0 syn-1))
+  (repeat 1000 (optimizers/gradient-descent error))
   (tf/mean error)])
 ```
 

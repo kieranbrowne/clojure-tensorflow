@@ -182,5 +182,26 @@
                ]))
            0.001)))
 
+    (testing "Neural net with infered variables"
+      (is (<
+           (let [input (tf/constant [[1. 1. 1.]
+                                     [1. 0. 1.]
+                                     [0. 1. 1.]
+                                     [0. 0. 1.]])
+                 target (tf/constant [[0.]
+                                      [1.]
+                                      [1.]
+                                      [0.]])
+                 syn-0 (tf/variable (repeatedly 3 #(repeatedly 5 rand-synapse)))
+                 syn-1 (tf/variable (repeatedly 5 #(repeatedly 1 rand-synapse)))
+                 hidden-layer (tf/sigmoid (tf/matmul input syn-0))
+                 network (tf/sigmoid (tf/matmul hidden-layer syn-1))
+                 error (tf/pow (tf/sub target network) (tf/constant 2.))]
+             (session-run
+              [(tf/global-variables-initializer)
+               (repeat 1000 (tf.optimizers/gradient-descent error))
+               (tf/mean (tf/mean error))
+               ]))
+           0.001)))
 
     ))
