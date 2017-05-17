@@ -5,18 +5,30 @@ A very light layer over Java interop for working with TensorFlow.
 ```clojure
 (ns example.core
   (:require [clojure-tensorflow.ops :as tf]
-            [clojure-tensorflow.core :as run]))
+            [clojure-tensorflow.optimizers :as optimizers]
+            [clojure-tensorflow.core :refer [session-run]]))
 
-;; Define some operations
+;; Training data
 (def input (tf/constant [[0. 1.] [0. 0.] [1. 1.] [1. 0.]]))
-(def weights (tf/variable (repeatedly 2 #(vector (dec (* 2 (rand)))))))
+(def target (tf/constant [[0.] [0.] [1.] [1.]]))
 
-(def shallow-neural-net (tf/sigmoid (tf/matmul input weights)))
+;; Network weights
+(def rand-synapse (fn [] (dec (* 2 (rand)))))
+(def syn-0 (tf/variable (repeatedly 2 #(repeatedly 3 rand-synapse))))
+(def syn-1 (tf/variable (repeatedly 3 #(repeatedly 1 rand-synapse))))
 
-;; Run operations
-(run/session-run
+;; Our model
+(def hidden-layer (tf/sigmoid (tf/matmul input syn-0)))
+(def output-layer (tf/sigmoid (tf/matmul hidden-layer syn-1)))
+
+;; Cost function
+(def error (tf/pow (tf/sub target output-layer) (tf/constant 2.)))
+
+;; Train Network
+(session-run
  [(tf/global-variables-initializer)
-  shallow-neural-net])
+  (repeat 1000 (optimizers/gradient-descent error syn-0 syn-1))
+  (tf/mean error)])
 ```
 
 ## Usage
