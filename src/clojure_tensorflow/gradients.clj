@@ -3,7 +3,8 @@
    [clojure-tensorflow.build :as build]
    [clojure-tensorflow.utils :as utils]
    [clojure-tensorflow.ops :as ops]
-   ))
+
+   [clojure-tensorflow.ops :as tf]))
 
 
 (defn get-op-by-name [n]
@@ -17,51 +18,54 @@
       (some (partial depends-on? independent) (get-inputs dependent))
       (= dependent independent)))
 
+(def registered-gradients
+  (atom {"Const" [(fn [& in] (ops/constant 1.))]
+         "Pow" [(fn [& in] (ops/mult (second in) (ops/pow (first in) (ops/sub (second in) (ops/constant 1.)))))
+                (fn [& in] (ops/mult (ops/log (first in)) (ops/pow (first in) (second in))))]
+         "Variable" [(fn [& in] (ops/constant 1.))]
+         "Add" (repeat 2 (fn [& in] (ops/constant 1.)))
+         "Sub" [(fn [& in] (ops/constant 1.))
+                (fn [& in] (ops/constant -1.))]
+         "MatMul" [(fn [& in] (second in))
+                   (fn [& in] (first in))]
+         "Mul" [(fn [& in] (second in))
+                (fn [& in] (first in))]
+         "Div" [(fn [& in] (second in))
+                (fn [& in] (first in))]
+         "Sigmoid" [(fn [& in] (ops/mult (ops/sigmoid (first in))
+                                        (ops/sub (ops/constant 1.) (ops/sigmoid (first in)))))]
+         }))
+
+(defn register-gradient [op-type functions]
+  (swap! registered-gradients op-type functions))
+
 (defn get-registered-gradient
-  ([node ]
-   (let [{output :output which :which} node
-         inputs (get-inputs output)]
-    (case (.type (.op output))
-      "Const" (ops/constant 1.)
-      "Variable" (ops/constant 1.)
-      "Add" (ops/constant 1.)
-      "Sub" (which [(ops/constant 1.)
-                    (ops/constant -1.)])
-      "Pow" (which [
-             (ops/mult (second inputs) (ops/pow (first inputs)  (ops/sub (second inputs) (ops/constant 1.))))
-             (ops/mult (ops/log (first inputs)) (ops/pow (first inputs) (second inputs)))
-             ])
-      "MatMul" (which (reverse inputs)) ;; need to work out which is important
-      "Mul" (which (reverse inputs))
-      "Div" (which (reverse inputs))
-      "Sigmoid" (ops/mult (ops/sigmoid (first inputs))
-                          (ops/sub (ops/constant 1.) (ops/sigmoid (first inputs))))
-      "Mean" (ops/size (first inputs)) ;; need to work out which is important
-      "Sum" (first inputs)
-      ))))
+  [node]
+  (let [{output :output which :which} node]
+    (apply (which (get @registered-gradients (.type (.op output)))) (get-inputs output))))
 
-
-(def collate-paths
-  (fn [from to path-atom path]
-    (let [dependents (filter (partial depends-on? to) (get-inputs from))
-          which-dependents (map #(.indexOf (get-inputs from) %) dependents)]
-      (if (= from to)
-        (swap! path-atom conj (conj path {:output (ops/constant 1.0) :which first :chain-fn ops/mult}))
-        (doall
-         (map #(collate-paths %1 to path-atom
-                              (conj path {:output from
-                                          :which (fn [x] (nth x %2))
-                                          :chain-fn (cond
-                                                      (= "MatMul" (.type (.op from)))
-                                                      (if (= 0 %2)
-                                                        (fn [a b] (ops/transpose (ops/matmul a (ops/transpose b))))
-                                                        ops/dot)
-                                                      true ops/mult
-                                                      )
-                                          }))
-              dependents which-dependents)))
-      )))
-
+(defn collate-paths [from to path-atom path]
+  (let [dependents (filter (partial depends-on? to) (get-inputs from))
+        which-dependents (map #(.indexOf (get-inputs from) %) dependents)]
+    (if (= from to)
+      (swap! path-atom conj
+             (conj path {:output (ops/constant 1.0)
+                         :which first
+                         :chain-fn ops/mult}))
+      (doall
+       (map
+        #(collate-paths
+          %1 to path-atom
+          (conj path
+                {:output from
+                 :which (fn [x] (nth x %2))
+                 :chain-fn
+                 (case (.type (.op from))
+                   "MatMul" (if (= 0 %2)
+                              (comp ops/transpose ops/dot-b)
+                              ops/dot-a)
+                   ops/mult)}))
+        dependents which-dependents)))))
 
 (defn paths
   "Get all paths from one op to another"
@@ -71,13 +75,11 @@
     @paths))
 
 (defn relevant-variables [op]
-  (filter #(clojure-tensorflow.gradients/depends-on? % op)
+  (filter #(depends-on? % op)
           (map :tf-op
                (filter
                 #(= (:operation %) "Variable")
-                @build/shadow-graph))
-          )
-  )
+                @build/shadow-graph))))
 
 (defn gradient [y x]
   (reduce
@@ -93,8 +95,7 @@
 (defn gradients
   "The symbolic gradient of y with respect to xs.
   For example, if we wanted to calculate the gradient of our
-  cost function with respect to our weight, we could use
-  `(gradients cost weights)`."
+  cost function with respect to our weight, we could use."
   ([y & xs] (map (partial gradient y) xs))
   ([y] (apply (partial gradients y) (relevant-variables y))))
 
