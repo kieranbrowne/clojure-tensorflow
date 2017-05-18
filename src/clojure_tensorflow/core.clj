@@ -36,8 +36,8 @@
 
 (defn session-run
   "Run list of ops, return last"
-  ([ops] (session-run build/default-graph ops))
-  ([graph ops] (session-run graph (session graph) ops))
+  ([ops] (session-run build/default-graph (session) ops))
+  ([session ops] (session-run build/default-graph session ops))
   ([graph session ops]
    (let [ops (flatten ops)
          op-run (partial op-run graph session)]
@@ -50,7 +50,7 @@
      (let [result
            (utils/tensor->clj
             (op-run (last ops)))]
-       ;; close session to free up memory
-       (.close session)
+       ;; ;; close session to free up memory
+       ;; (.close session)
        ;; return result
        result))))
