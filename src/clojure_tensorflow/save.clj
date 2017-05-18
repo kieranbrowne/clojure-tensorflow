@@ -11,7 +11,7 @@
              (assoc %1 (.name (.op %2))
                     (session-run sess [%2])))
           {}
-          (flatten (map relevant-variables [v]))))
+          (flatten (map relevant-variables vars))))
 
 
 (defn save-vars
