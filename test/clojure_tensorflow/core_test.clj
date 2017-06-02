@@ -4,7 +4,8 @@
             [clojure-tensorflow.ops :as tf]
             [clojure-tensorflow.gradients :as tf.gradients]
             [clojure-tensorflow.optimizers :as tf.optimizers]
-            ))
+            [clojure-tensorflow.layers :as layer]))
+            
 
 (deftest test-session-running
   (testing "Run simple graph"
@@ -54,8 +55,7 @@
 
     (testing "Gradients sigmoid"
       (is (= (session-run [(tf.gradients/gradients g a)])
-             (float 0.045176655))))
-    ))
+             (float 0.045176655))))))
 
 (deftest test-basic-feed-forward-neural-network
   (let [input (tf/constant [[1. 0. 1.]])
@@ -70,35 +70,35 @@
     (testing "Global variables initializer"
       (is (= (session-run
               [(tf/global-variables-initializer)
-               weights
-               ]) (map (partial map float) [[0.08] [-0.65] [0.44]]))))
+               weights])
+             (map (partial map float) [[0.08] [-0.65] [0.44]]))))
 
     (testing "Compute gradients"
       (is (= (session-run
               [(tf/global-variables-initializer)
-               (tf.gradients/gradients cost weights)
-               ]) (map (partial map float) [[-0.23383345] [0.0] [-0.23383345]]))))
+               (tf.gradients/gradients cost weights)])
+             (map (partial map float) [[-0.23383345] [0.0] [-0.23383345]]))))
 
     (testing "Compute gradients without supplying the relevant variables"
       (is (= (session-run
               [(tf/global-variables-initializer)
-               (tf.gradients/gradients cost)
-               ]) (map (partial map float) [[-0.23383345] [0.0] [-0.23383345]]))))
+               (tf.gradients/gradients cost)])
+             (map (partial map float) [[-0.23383345] [0.0] [-0.23383345]]))))
 
     (testing "Gradient decent"
       (is (= (session-run
               [(tf/global-variables-initializer)
                (tf.optimizers/gradient-descent cost weights)
-               cost
-               ]) [[(float -0.22862685)]])))
+               cost])
+             [[(float -0.22862685)]])))
 
 
     (testing "Training"
       (is (< (session-run
               [(tf/global-variables-initializer)
                (repeat 100 (tf.optimizers/gradient-descent cost weights))
-               (tf/mean (tf/mean cost))
-               ]) 0.0001)))
+               (tf/mean (tf/mean cost))])
+             0.0001)))
 
     (let [a (tf/constant 2.)
           b (tf/constant 1.)
@@ -108,30 +108,28 @@
 
       (testing "Constant deriv"
         (is (= (session-run
-                [(tf.gradients/gradients c a)
-                 ]) (float 1.0))))
+                [(tf.gradients/gradients c a)])
+               (float 1.0))))
 
       (testing "Add deriv"
         (is (= (session-run
-                [(tf.gradients/gradients e c)
-                 ]) (float 2.0))))
+                [(tf.gradients/gradients e c)])
+               (float 2.0))))
 
       (testing "Add deriv via second input"
         (is (= (session-run
-                [(tf.gradients/gradients e d)
-                 ]) (float 3.0))))
+                [(tf.gradients/gradients e d)])
+               (float 3.0))))
 
       (testing "Mult deriv via complex path"
         (is (= (session-run
-                [(tf.gradients/gradients e b)
-                 ]) (float 5.0))))
+                [(tf.gradients/gradients e b)])
+               (float 5.0))))
 
       (testing "Mult deriv via complex path"
         (is (= (session-run
-                [(tf.gradients/gradients e e)
-                 ]) (float 1.0))))
-      )
-    ))
+                [(tf.gradients/gradients e e)])
+               (float 1.0)))))))
 
 
 (deftest test-training
@@ -155,8 +153,7 @@
              (session-run
               [(tf/global-variables-initializer)
                (repeat 400 (tf.optimizers/gradient-descent error syn-0))
-               (tf/mean (tf/mean error))
-               ]))
+               (tf/mean (tf/mean error))]))
            0.001)))
 
 
@@ -177,9 +174,9 @@
                  error (tf/pow (tf/sub target network) (tf/constant 2.))]
              (session-run
               [(tf/global-variables-initializer)
-               (repeat 1000 (tf.optimizers/gradient-descent error syn-0 syn-1))
-               (tf/mean (tf/mean error))
-               ]))
+               (repeat 1000 (tf.optimizers/gradient-descent
+                             error syn-0 syn-1))
+               (tf/mean (tf/mean error))]))
            0.001)))
 
     (testing "Neural net with infered variables"
@@ -200,8 +197,23 @@
              (session-run
               [(tf/global-variables-initializer)
                (repeat 1000 (tf.optimizers/gradient-descent error))
-               (tf/mean (tf/mean error))
-               ]))
-           0.001)))
+               (tf/mean (tf/mean error))]))
 
-    ))
+           0.001)))))
+
+(deftest test-layer-fns
+  (let [x (tf/constant [[1. 0. 1.]])
+        y (tf/constant [[1.0]])
+        network (-> x
+                    (layer/linear 6)
+                    (layer/linear 8)
+                    (layer/linear 1))
+        error (tf/pow (tf/sub y network) (tf/constant 2.))]
+
+    (testing "Layer building"
+      (is
+       (< (session-run
+           [(tf/global-variables-initializer)
+            (repeat 100 (tf.optimizers/gradient-descent error))
+            (tf/mean (tf/mean error))])
+          0.01)))))

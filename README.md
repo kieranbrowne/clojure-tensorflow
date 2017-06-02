@@ -5,30 +5,41 @@ A very light layer over Java interop for working with TensorFlow.
 ```clojure
 (ns example.core
   (:require [clojure-tensorflow.ops :as tf]
-            [clojure-tensorflow.optimizers :as optimizers]
+            [clojure-tensorflow.layers :as layer]
+            [clojure-tensorflow.optimizers :as optimize]
             [clojure-tensorflow.core :refer [session-run]]))
 
 ;; Training data
 (def input (tf/constant [[0. 1.] [0. 0.] [1. 1.] [1. 0.]]))
 (def target (tf/constant [[0.] [0.] [1.] [1.]]))
 
-;; Network weights
-(def rand-synapse (fn [] (dec (* 2 (rand)))))
-(def syn-0 (tf/variable (repeatedly 2 #(repeatedly 3 rand-synapse))))
-(def syn-1 (tf/variable (repeatedly 3 #(repeatedly 1 rand-synapse))))
+;; Define network / model
+(def network
+  ;; first layer is just the training input data
+  (-> input
+      ;; next is a hidden layer of six neurons
+      ;; we can set the activation function like so
+      (layer/linear 6 :activation tf/sigmoid)
+      ;; next is a hidden layer of eight neurons
+      ;; tf/sigmoid is used by default when we dont
+      ;; specify an activation fn
+      (layer/linear 8)
+      ;; our last layer needs to be the same size as
+      ;; our training target data, so one neuron.
+      (layer/linear 1)))
 
-;; Our model
-(def hidden-layer (tf/sigmoid (tf/matmul input syn-0)))
-(def output-layer (tf/sigmoid (tf/matmul hidden-layer syn-1)))
 
 ;; Cost function
-(def error (tf/pow (tf/sub target output-layer) (tf/constant 2.)))
+(def error
+  ;; the squared difference is a good one
+  (tf/square (tf/sub target network)))
 
 ;; Train Network
 (session-run
  [(tf/global-variables-initializer)
   (repeat 1000 (optimizers/gradient-descent error))
   (tf/mean error)])
+;; the error is now very small.
 ```
 
 ## Usage

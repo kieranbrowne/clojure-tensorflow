@@ -1,7 +1,8 @@
 (ns clojure-tensorflow.ops
   (:require
    [clojure-tensorflow.build :as build :refer [op-builder]]
-   [clojure-tensorflow.utils :as utils]))
+   [clojure-tensorflow.utils :as utils]
+   [clojure-tensorflow.ops :as tf]))
 
 (defn global-variables-initializer []
   @build/global-variables)
@@ -86,6 +87,8 @@
   (op-builder
    {:operation "Pow"
     :inputs [a b]}))
+
+(def square #(pow % (constant 2.)))
 
 (defn log [a]
   (op-builder
