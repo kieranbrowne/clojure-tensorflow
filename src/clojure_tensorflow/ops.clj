@@ -2,7 +2,7 @@
   (:require
    [clojure-tensorflow.build :as build :refer [op-builder]]
    [clojure-tensorflow.utils :as utils]
-   [clojure-tensorflow.ops :as tf]))
+   ))
 
 (defn global-variables-initializer []
   @build/global-variables)
@@ -36,12 +36,12 @@
      (swap! build/global-variables conj (assign var val))
      var)))
 
-(defn placeholder [datatype]
+(defn placeholder [node-name datatype]
   (op-builder
    {:operation "Placeholder"
+    :node-name (name node-name)
     :attrs {:dtype datatype}
     }))
-
 
 ;; math ops
 
@@ -138,3 +138,8 @@
   (op-builder
    {:operation "Identity"
     :inputs [a]}))
+
+(def float32 org.tensorflow.DataType/FLOAT)
+(def int32 org.tensorflow.DataType/INT32)
+(def int64 org.tensorflow.DataType/INT64)
+(def float64 org.tensorflow.DataType/DOUBLE)

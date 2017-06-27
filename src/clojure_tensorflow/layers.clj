@@ -15,8 +15,6 @@
     #(repeatedly out rand-synapse))))
 
 
-
-
 (defn linear [previous-layer size & args]
   (let [{activation :activation} (merge layer-defaults (apply hash-map args))]
     (activation

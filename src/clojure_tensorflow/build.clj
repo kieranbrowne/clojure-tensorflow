@@ -2,6 +2,7 @@
   (:require [clojure-tensorflow.utils :as utils]))
 
 (def default-graph (new org.tensorflow.Graph))
+(def ^:dynamic graph default-graph)
 
 ;; As a design choice from tensorflow graph needs to be
 (def global-variables (atom []))
@@ -14,7 +15,7 @@
 
 (defn op-builder
   "Returns a function which creates an operation for the graph"
-  ([op-profile] (op-builder op-profile default-graph))
+  ([op-profile] (op-builder op-profile graph))
   ([op-profile graph]
    (let [{:keys [operation node-name attrs inputs]
           :or {node-name (str (gensym operation)) attrs {} inputs []}

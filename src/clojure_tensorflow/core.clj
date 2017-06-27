@@ -1,13 +1,9 @@
 (ns clojure-tensorflow.core
-  (:require [clojure-tensorflow.build :as build]
-            [clojure-tensorflow.ops :as tf]
-            [clojure-tensorflow.gradients :as tf.optimizers]
-            [clojure-tensorflow.utils :as utils]))
+  (:require [clojure-tensorflow.utils :as utils])
+  (:use [clojure-tensorflow.build :only [graph]]))
 
-(defn session
-  "Create a session"
-  ([graph] (new org.tensorflow.Session graph))
-  ([] (session build/default-graph)))
+
+(def ^:dynamic session (org.tensorflow.Session. graph))
 
 (defn feed
   "Feed value to placeholder
@@ -16,41 +12,34 @@
    (utils/thread
      runner
      (map (fn [[key val]]
-            #(.feed % key val)) feed-map))))
+            #(.feed % (name key) (utils/clj->tensor val))) feed-map))))
 
-(defn op-run
+
+(defn run
   "Call session runner on single op.
   Returns tensor object"
-  ([op] (op-run build/default-graph op))
-  ([graph op] (op-run graph (session graph) op {}))
-  ([graph session op] (op-run graph session op {}))
-  ([graph session op feed-map]
-  (-> session
-      .runner
-      (feed feed-map)
-      (.fetch (.name (.op op)))
-      .run
-      (.get 0)
-      )))
+  ([op] (run op {}))
+  ([op feed-map]
+   (if (coll? op)
+     ;; if run on a list of operations, run all and return the last
+     (do (-> session .runner (feed feed-map))
+         (last (map run (flatten op))))
+     ;; if run on a single op return it
+     (-> session
+         .runner
+         (feed feed-map)
+         (.fetch (.name (.op op)))
+         .run
+         (.get 0)
+         utils/tensor->clj
+         ))))
 
+(defmacro with-graph [& body]
+  `(binding [graph (org.tensorflow.Graph.)]
+     (try ~@body
+       (finally (.close graph)))))
 
-(defn session-run
-  "Run list of ops, return last"
-  ([ops] (session-run build/default-graph (session) ops))
-  ([session ops] (session-run build/default-graph session ops))
-  ([graph session ops]
-   (let [ops (flatten ops)
-         op-run (partial op-run graph session)]
-
-     ;; run first n ops to set up state
-     (doseq [op (butlast ops)]
-       (op-run op))
-
-     ;; run final op
-     (let [result
-           (utils/tensor->clj
-            (op-run (last ops)))]
-       ;; ;; close session to free up memory
-       ;; (.close session)
-       ;; return result
-       result))))
+(defmacro with-session [& body]
+  `(binding [session (org.tensorflow.Session. graph)]
+     (try ~@body
+       (finally (.close session)))))

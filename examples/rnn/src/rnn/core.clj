@@ -2,7 +2,7 @@
   (:require [clojure-tensorflow.ops :as tf]
             [clojure-tensorflow.layers :as layer]
             [clojure-tensorflow.optimizers :as optimize]
-            [clojure-tensorflow.core :refer [session-run]]))
+            [clojure-tensorflow.core :refer [session-run feed]]))
 
 ;; Training data
 (def data
@@ -93,3 +93,10 @@
     (recur (dec n) (str string (get-next-char (apply str (take-last 4 string)))))))
 ;; => "meow meow meow meow meow"
 
+(def simp (tf/placeholder org.tensorflow.DataType/FLOAT))
+
+(session-run
+ [(tf/assign simp (tf/constant 1.))
+  ;; simp
+  ]
+ )

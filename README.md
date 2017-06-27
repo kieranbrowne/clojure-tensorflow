@@ -7,7 +7,7 @@ A very light layer over Java interop for working with TensorFlow.
   (:require [clojure-tensorflow.ops :as tf]
             [clojure-tensorflow.layers :as layer]
             [clojure-tensorflow.optimizers :as optimize]
-            [clojure-tensorflow.core :refer [session-run]]))
+            [clojure-tensorflow.core :refer [run with-graph with-session]]))
 
 ;; Training data
 (def input (tf/constant [[0. 1.] [0. 0.] [1. 1.] [1. 0.]]))
@@ -29,17 +29,19 @@ A very light layer over Java interop for working with TensorFlow.
       (layer/linear 1)))
 
 
-;; Cost function
-(def error
-  ;; the squared difference is a good one
-  (tf/square (tf/sub target network)))
+;; Cost function; we're using the squared difference
+(def error (tf/square (tf/sub target network)))
 
-;; Train Network
-(session-run
- [(tf/global-variables-initializer)
-  (repeat 1000 (optimizers/gradient-descent error))
-  (tf/mean error)])
-;; the error is now very small.
+;; Initialize global variables
+(run (tf/global-variables-initializer))
+
+;; Train Network 1000 epochs
+(run (repeat 1000 (optimize/gradient-descent error)))
+
+;; Initialize global variables
+(run (tf/mean error))
+;; => [9.304908E-5]
+;; the error is now incredibly small
 ```
 
 ## Usage
