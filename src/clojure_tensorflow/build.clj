@@ -5,7 +5,7 @@
 (def ^:dynamic graph default-graph)
 
 ;; As a design choice from tensorflow graph needs to be
-(def global-variables (atom []))
+(def ^:dynamic global-variables (atom []))
 
 ;; The shadow graph patches a couple of requirements while we wait for
 ;; the Java api. We store all relevant information about operations as

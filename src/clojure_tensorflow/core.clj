@@ -1,6 +1,7 @@
 (ns clojure-tensorflow.core
-  (:require [clojure-tensorflow.utils :as utils])
-  (:use [clojure-tensorflow.build :only [graph]]))
+  (:require [clojure-tensorflow.utils :as utils]
+            [clojure-tensorflow.ops :as tf])
+  (:use [clojure-tensorflow.build :only [graph global-variables]]))
 
 
 (def ^:dynamic session (org.tensorflow.Session. graph))
@@ -35,7 +36,8 @@
          ))))
 
 (defmacro with-graph [& body]
-  `(binding [graph (org.tensorflow.Graph.)]
+  `(binding [graph (org.tensorflow.Graph.)
+             global-variables (atom [])]
      (try ~@body
        (finally (.close graph)))))
 

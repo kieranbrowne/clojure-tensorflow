@@ -139,6 +139,24 @@
    {:operation "Identity"
     :inputs [a]}))
 
+(defn unstack
+  ([value num axis]
+   (op-builder
+    {:operation "Unpack"
+     :inputs [value]
+     :attrs {:num num
+             :axis axis}}))
+  ([value num] (unstack value num 0)))
+
+(defn stack
+  ([value axis]
+   (op-builder
+    {:operation "Pack"
+     :inputs [value]
+     :attrs {:axis axis}}
+    ))
+  ([value] (stack value 0)))
+
 (def float32 org.tensorflow.DataType/FLOAT)
 (def int32 org.tensorflow.DataType/INT32)
 (def int64 org.tensorflow.DataType/INT64)
