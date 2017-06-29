@@ -52,7 +52,7 @@ A very light layer over Java interop for working with TensorFlow.
 
 ### 2. Add a version of TensorFlow to your dependencies
 
-The easiest option is to add `[org.tensorflow/tensorflow  "1.1.0-rc1"]` to your dependencies. However, TensorFlow is fastest when you use a version compiled for your hardware and OS, and this is especially true if you have a GPU.
+The easiest option is to add `[org.tensorflow/tensorflow  "1.2.0"]` to your dependencies. However, TensorFlow is fastest when you use a version compiled for your hardware and OS, and this is especially true if you have a GPU.
 
 Read the official [Installing TensorFlow for Java](https://www.tensorflow.org/install/install_java) guide for more information.
 
