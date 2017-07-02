@@ -1,8 +1,14 @@
 # Clojure and TensorFlow
 
+A light layer of wrappers over Java interop for working with TensorFlow.
+
+[![Clojars Project](https://img.shields.io/clojars/v/clojure-tensorflow.svg)](https://clojars.org/clojure-tensorflow)
 [![Build Status](https://travis-ci.org/kieranbrowne/clojure-tensorflow.svg?branch=master)](https://travis-ci.org/kieranbrowne/clojure-tensorflow)
 
-A very light layer over Java interop for working with TensorFlow.
+
+## Getting started
+
+### Example Neural Network
 
 ```clojure
 (ns example.core
@@ -46,19 +52,9 @@ A very light layer over Java interop for working with TensorFlow.
 ;; the error is now incredibly small
 ```
 
-## Usage
+## Requirements
 
-### 1. Add this library your dependencies in project.clj
-
-[![Clojars Project](https://img.shields.io/clojars/v/clojure-tensorflow.svg)](https://clojars.org/clojure-tensorflow)
-
-### 2. Add a version of TensorFlow to your dependencies
-
-The easiest option is to add `[org.tensorflow/tensorflow  "1.2.0"]` to your dependencies. However, TensorFlow is fastest when you use a version compiled for your hardware and OS, and this is especially true if you have a GPU.
-
-Read the official [Installing TensorFlow for Java](https://www.tensorflow.org/install/install_java) guide for more information.
-
-> NOTE: TensorFlow requires at least Java 8 to run. This will already be the default on most machines, but if it isn't for you, it's possible to force lein to use it by adding the :java-cmd "/path/to/java" key to your `project.clj`.
+TensorFlow requires at least Java 8. This will already be the default on most machines, but if it isn't for you, it's possible to force lein to use it by adding the :java-cmd "/path/to/java" key to your `project.clj`.
 
 ## License
 
