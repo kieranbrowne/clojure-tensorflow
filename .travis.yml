@@ -2,3 +2,4 @@ language: clojure
 script: "lein test"
 jdk:
     - oraclejdk8
+sudo: required
