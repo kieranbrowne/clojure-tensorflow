@@ -3,3 +3,4 @@ script: "lein test"
 jdk:
     - oraclejdk8
 sudo: required
+dist: trusty
