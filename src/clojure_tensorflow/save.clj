@@ -3,13 +3,13 @@
    [clojure-tensorflow.gradients
     :refer [relevant-variables get-op-by-name]]
    [clojure-tensorflow.ops :as ops]
-   [clojure-tensorflow.core :refer [session-run]]
-   ))
+   [clojure-tensorflow.core :refer [run]]))
+
 
 (defn collate-vars [sess vars]
   (reduce #(let [node-name %2]
              (assoc %1 (.name (.op %2))
-                    (session-run sess [%2])))
+                    (run sess [%2])))
           {}
           (flatten (map relevant-variables vars))))
 
