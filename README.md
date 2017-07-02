@@ -1,5 +1,7 @@
 # Clojure and TensorFlow
 
+[![Build Status](https://travis-ci.org/kieranbrowne/clojure-tensorflow.svg?branch=master)](https://travis-ci.org/kieranbrowne/clojure-tensorflow)
+
 A very light layer over Java interop for working with TensorFlow.
 
 ```clojure
