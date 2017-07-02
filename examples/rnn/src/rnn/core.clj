@@ -2,29 +2,29 @@
   (:require [clojure-tensorflow.ops :as tf]
             [clojure-tensorflow.layers :as layer]
             [clojure-tensorflow.optimizers :as optimize]
-            [clojure-tensorflow.core :refer [session-run feed]]))
+            [clojure-tensorflow.core :refer [run]]))
 
 ;; Training data
 (def data
   (clojure.string/join (repeat 5 "meow ")))
 
-(def conversion-map
-  (apply merge (map (fn [char num]
-                {char (double (/ num (dec (count (set data)))))})
-              (set data) (range (count (set data))))))
+(defn encode-one-hot
+  "Encode string into one hot vectors"
+  [string]
+  (let [chars (set (map char string))]
+    (map (fn [c] (map #(if (= c %) 1. 0.) chars))
+         string)))
+
+(defn decode-one-hot
+  "Decode one hot vectors into string"
+  [model-output string]
+  (let [chars (set (map char string))]
+    (apply str
+           (map #(key (apply max-key val (zipmap chars %)))
+                model-output))))
 
 
-(defn convert-back [model-output]
-  (map (partial (comp (partial apply str) map)
-                (fn [x] (get (clojure.set/map-invert conversion-map)
-                            (first (sort-by #(Math/abs (- x %))
-                                            (vals conversion-map))))
-                  )) model-output))
-
-
-
-(def input (tf/constant
-            (partition 4 (map conversion-map data))))
+(def input (tf/constant (encode-one-hot data)))
 (def target (tf/constant
              (partition 4 (rest (map conversion-map data)))))
 
@@ -38,65 +38,67 @@
               (reverse shape)))))
   ([shape] (random-normal shape 1)))
 
+(defn zeros
+  "Generate a tensor of random values with a normal distribution"
+  [shape]
+  (let [source (java.util.Random. (rand))]
+    (reduce #(repeat %2 %1)
+             0.
+             (reverse shape))))
 
 
-(def input-weights
-  "Initialise weights as variable tensor of values between -1 and 1"
-  (tf/variable (random-normal [4 18])))
+;; Network weights
+(def input->hidden
+  (tf/variable (random-normal [5 18])))
 
-(def hidden-weights
-  "Initialise weights as variable tensor of values between -1 and 1"
+(def hidden->hidden
   (tf/variable (random-normal [18 18])))
 
-(def output-weights
-  "Initialise weights as variable tensor of values between -1 and 1"
-  (tf/variable (random-normal [18 4])))
+(def hidden->output
+  (tf/variable (random-normal [18 1])))
+
+;; In an rnn the output of a layer is added to the next input
+;; and fed back into the same layer which is typically the only
+;; layer in a network.
+
 
 ;; Define network / model
-(def network
-  (comp
-   #(tf/sigmoid (tf/matmul % output-weights))
-   (apply comp (repeat 5 #(tf/sigmoid (tf/matmul % hidden-weights))))
-   #(tf/sigmoid (tf/matmul % input-weights))
-   ))
+(def hidden-state (tf/variable (zeros [5])))
+(def hidden-layer
+  (tf/sigmoid
+   (tf/add
+    (tf/matmul hidden-state hidden->hidden)
+    (tf/matmul input input->hidden)
+    )))
+(def output (tf/matmul hidden-state hidden->output))
 
 
-(def error
-  ;; the squared difference is a good one
-  (tf/square (tf/sub target (network input))))
 
-;; Train Network
-(def sess (clojure-tensorflow.core/session))
 
-;; initialise global variables
-(session-run sess [(tf/global-variables-initializer)])
+;; Run network
 
-;; use gradient decent to train the network
-(session-run sess
- [(repeat 100 (optimize/gradient-descent error))
-  (tf/mean (tf/mean error))])
-;; the error is now very small.
+(run (tf/global-variables-initializer))
 
-(defn get-next-char [input]
-  (last (last
-         (convert-back
-          (session-run
-           sess
-           [(network
-             (tf/constant
-              [(map conversion-map input)]))])))))
 
-;; Generate 20 characters with the trained network
-(loop [n 20 string "meow"]
-  (if (zero? n)
-    string
-    (recur (dec n) (str string (get-next-char (apply str (take-last 4 string)))))))
-;; => "meow meow meow meow meow"
+(defn constant [val]
+  (let [tensor (utils/clj->tensor val)]
+    (op-builder
+     {:operation "Const"
+      :attrs {:dtype (.dataType tensor)
+              :value tensor
+              }})))
 
-(def simp (tf/placeholder org.tensorflow.DataType/FLOAT))
+(run
+  (clojure-tensorflow.build/op-builder
+   {:operation "Gather"
+    :inputs [(tf/constant [1. 2.]) (tf/constant [0 1])]
+    }))
 
-(session-run
- [(tf/assign simp (tf/constant 1.))
-  ;; simp
-  ]
- )
+(run (tf/assign hidden-state hidden-layer))
+
+(decode-one-hot
+ (run output) data)
+
+
+(def input-dim 2)
+(def hidden-dim 6)

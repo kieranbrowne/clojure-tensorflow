@@ -1,7 +1,7 @@
 (ns shallow-neural-network.core
   (:require [clojure-tensorflow.ops :as tf]
             [clojure-tensorflow.optimizers :as optimizers]
-            [clojure-tensorflow.core :as run]))
+            [clojure-tensorflow.core :refer [run]]))
 
 ;;;;;;;;;;;; Training Data ;;;;;;;;;;;;;;;
 
@@ -29,29 +29,25 @@
   (tf/sigmoid (tf/matmul inputs weights)))
 
 (def error
-  (tf/div
-   (tf/pow
-    (tf/sub outputs network)
-    (tf/constant 2.))
-   (tf/constant 2.)))
+   (tf/pow (tf/sub outputs network) (tf/constant 2.)))
 
 
 ;;;;;;;;; Testing Our Network ;;;;;;;;;;;;
 
 ;; Errors without training
-(run/session-run
- [(tf/global-variables-initializer)
-  (tf/mean error)])
+(run
+  [(tf/global-variables-initializer)
+   (tf/mean error)])
 ;; => [0.14975819]
 ;; The mean error is too damn high
 
 
 ;;;;;;;;;; Gradient Descent ;;;;;;;;;;;;;;
 
-(run/session-run
- [(tf/global-variables-initializer)
-  (repeat 1000 (optimizers/gradient-descent error weights))
-  (tf/mean error)])
+(run
+  [(tf/global-variables-initializer)
+   (repeat 1000 (optimizers/gradient-descent error weights))
+   (tf/mean error)])
 ;; => [2.1348597E-4]
 
 ;; The mean error is now sufficiently small.

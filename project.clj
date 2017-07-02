@@ -1,4 +1,4 @@
-(defproject clojure-tensorflow/clojure-tensorflow "0.2.1"
+(defproject clojure-tensorflow/clojure-tensorflow "0.2.2"
   :description "A very light layer over Java interop for working with TensorFlow"
   :url "http://github.com/kieranbrowne/clojure-tensorflow"
   :license {:name "Eclipse Public License"
