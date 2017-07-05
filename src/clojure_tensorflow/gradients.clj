@@ -39,8 +39,12 @@
 
 (defn get-registered-gradient
   [node]
-  (let [{output :output which :which} node]
-    (apply (which (get @registered-gradients (.type (.op output)))) (get-inputs output))))
+  (let [{output :output which :which} node
+        grad-type (.type (.op output))
+        grad (get @registered-gradients grad-type)]
+    (when-not grad
+      (throw (ex-info "Gradient not supported yet." {:type grad-type})))
+    (apply (which grad) (get-inputs output))))
 
 (defn collate-paths [from to path-atom path]
   (let [dependents (filter (partial depends-on? to) (get-inputs from))
