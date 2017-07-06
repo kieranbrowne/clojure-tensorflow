@@ -3,6 +3,7 @@
             [clojure-tensorflow.core
              :refer [run with-graph with-session]]
             [clojure-tensorflow.ops :as tf]
+            [clojure-tensorflow.build :as build]
             [clojure-tensorflow.gradients :as tf.gradients]
             [clojure-tensorflow.optimizers :as tf.optimizers]
             [clojure-tensorflow.layers :as layer]
@@ -101,7 +102,7 @@
     (testing "Gradient decent"
       (is (= (run
                [(tf/global-variables-initializer)
-                (tf.optimizers/gradient-descent cost weights)
+                (tf.optimizers/gradient-descent cost :weights [weights] :learning-rate 1.)
                 cost])
              [[(float -0.22862685)]])))
 
@@ -109,7 +110,7 @@
     (testing "Training"
       (is (< (run
                [(tf/global-variables-initializer)
-                (repeat 100 (tf.optimizers/gradient-descent cost weights))
+                (repeat 100 (tf.optimizers/gradient-descent cost :weights [weights] :learning-rate 1.))
                 (tf/mean (tf/mean cost))])
              0.0001)))
 
@@ -165,7 +166,7 @@
                  error (tf/pow (tf/sub target network) (tf/constant 2.))]
              (run
               [(tf/global-variables-initializer)
-               (repeat 400 (tf.optimizers/gradient-descent error syn-0))
+               (repeat 400 (tf.optimizers/gradient-descent error :weights [syn-0] :learning-rate 1.))
                (tf/mean (tf/mean error))]))
            0.001)))
 
@@ -188,7 +189,7 @@
              (run
               [(tf/global-variables-initializer)
                (repeat 1000 (tf.optimizers/gradient-descent
-                             error syn-0 syn-1))
+                             error :weights [syn-0 syn-1] :learning-rate 1.))
                (tf/mean (tf/mean error))]))
            0.001)))
 
@@ -209,7 +210,7 @@
                  error (tf/pow (tf/sub target network) (tf/constant 2.))]
              (run
               [(tf/global-variables-initializer)
-               (repeat 1000 (tf.optimizers/gradient-descent error))
+               (repeat 1000 (tf.optimizers/gradient-descent error :learning-rate 1.))
                (tf/mean (tf/mean error))]))
 
            0.001)))
@@ -246,7 +247,7 @@
           (is
            (< (run
                [(tf/global-variables-initializer)
-                (repeat 100 (tf.optimizers/gradient-descent error))
+                (repeat 100 (tf.optimizers/gradient-descent error :learning-rate 1.))
                 (tf/mean (tf/mean error))])
               0.01)))))))
 
@@ -274,12 +275,75 @@
 
         ))))
 
+(deftest test-feed-neural-network
+  (let [rand-seed (java.util.Random. 1)
+        rand-synapse #(dec (* 2 (.nextDouble rand-seed)))]
 
-;; (with-graph (with-session
+    (with-graph
+      (with-session
 
-;;     (let [x (tf/placeholder :x tf/float32)
-;;           y (tf/placeholder :y tf/float32)]
+        (testing "Neural net with infered variables feed"
+          (is (<
+               (let [input (tf/placeholder :input tf/float32)
+                     target (tf/placeholder :target tf/float32)
+                     syn-0 (tf/variable (repeatedly 3 #(repeatedly 5 rand-synapse)))
+                     syn-1 (tf/variable (repeatedly 5 #(repeatedly 1 rand-synapse)))
+                     hidden-layer (tf/sigmoid (tf/matmul input syn-0))
+                     network (tf/sigmoid (tf/matmul hidden-layer syn-1))
+                     error (tf/pow (tf/sub target network) (tf/constant 2.))]
+                 (run
+                   [(tf/global-variables-initializer)
+                    (repeat 1000 (tf.optimizers/gradient-descent error :learning-rate 1.))
+                    (tf/mean (tf/mean error))]
+                   {:input [[1. 1. 1.] [1. 0. 1.] [0. 1. 1.] [0. 0. 1.]]
+                    :target [[0.]      [1.]       [1.]       [0.]]}))
 
-;;       (run (tf/mult x y)
-;;         {:x [2. 1. 2.] :y [4. 2. 2.]}))))
+               0.001)))
+        ))))
 
+(deftest test-linear-regression
+  (with-graph
+    (with-session
+
+      (let [x (tf/placeholder :x tf/float32)
+            y (tf/placeholder :y tf/float32)
+            m (tf/variable 1.)
+            b (tf/variable 0.)
+            line-of-best-fit (tf/add (tf/mult m x) b)
+            cost (tf/square (tf/sub y line-of-best-fit))
+            ]
+
+        (run (tf/global-variables-initializer))
+
+        (testing "Predict Single"
+          (is (= (float 2.)
+                 (run line-of-best-fit {:x 2.}))))
+
+        (testing "Predict Vector"
+          (is (= (map float [0. 1. 2.])
+                 (run line-of-best-fit
+                   {:x [0. 1. 2.]}))))
+
+        (testing "Cost Single"
+          (is (= (float 4.)
+                 (run cost {:x 6. :y 8.}))))
+
+        (testing "Cost Vector"
+          (is (= (map float [1. 0. 1.])
+                 (run cost
+                   {:x [0. 1. 2.] :y [1. 1. 1.]}))))
+
+        (testing "Stochastic gradient descent"
+          (is (> (float 0.01)
+                 ;; y = 5x+2.5
+                 (let [xs [-1. 0. 1. 2.]
+                       ys (map #(+ 2.5 (* 5 %)) xs)]
+                   (doseq [datum (take 10 (cycle
+                                           (map #(hash-map :x %1 :y %2) xs ys)))]
+                       (run
+                         (tf.optimizers/gradient-descent cost :learning-rate 0.4)
+                         datum))
+                   (run (tf/mean cost) {:x xs :y ys}))
+                 )))
+
+        ))))

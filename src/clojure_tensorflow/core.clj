@@ -1,7 +1,7 @@
 (ns clojure-tensorflow.core
   (:require [clojure-tensorflow.utils :as utils]
             [clojure-tensorflow.ops :as tf])
-  (:use [clojure-tensorflow.build :only [graph global-variables]]))
+  (:use [clojure-tensorflow.build :only [graph global-variables shadow-graph]]))
 
 
 (def ^:dynamic session (org.tensorflow.Session. graph))
@@ -24,7 +24,7 @@
    (if (coll? op)
      ;; if run on a list of operations, run all and return the last
      (do (-> session .runner (feed feed-map))
-         (last (map run (flatten op))))
+         (last (map #(run % feed-map) (flatten op))))
      ;; if run on a single op return it
      (-> session
          .runner
@@ -35,9 +35,11 @@
          utils/tensor->clj
          ))))
 
+
 (defmacro with-graph [& body]
   `(binding [graph (org.tensorflow.Graph.)
-             global-variables (atom [])]
+             global-variables (atom [])
+             shadow-graph (atom [])]
      (try ~@body
        (finally (.close graph)))))
 

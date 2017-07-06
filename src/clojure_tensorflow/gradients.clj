@@ -2,7 +2,8 @@
   (:require
    [clojure-tensorflow.build :as build]
    [clojure-tensorflow.utils :as utils]
-   [clojure-tensorflow.ops :as ops]))
+   [clojure-tensorflow.ops :as ops]
+))
 
 
 (defn get-op-by-name [n]
@@ -53,7 +54,7 @@
       (throw (ex-info "Gradient not supported yet." {:type grad-type})))
     (apply (which grad) (get-inputs output))))
 
-(defn collate-paths [from to path-atom path]
+(defn- collate-paths [from to path-atom path]
   (let [dependents (filter (partial depends-on? to) (get-inputs from))
         which-dependents (map #(.indexOf (get-inputs from) %) dependents)]
     (if (= from to)
@@ -120,6 +121,6 @@
    (ops/constant 0.000001)))
 
 (defn apply-gradients
-  [xs gradients]
+  [variables gradients]
   (map #(ops/assign %1 (ops/sub %1 %2))
-       xs gradients))
+       variables gradients))
