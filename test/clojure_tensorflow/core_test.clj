@@ -219,7 +219,7 @@
     (testing "Autoencoder"
       (is (<
            (let [inputs (tf/constant [[0.0 0.0 1.0] [0.0 1.0 1.0] [1.0 1.0 1.0] [1.0 0.0 1.0]])
-                 outputs (tf/constant [[0.0 0.0 1.0] [0.0 1.0 1.0] [1.0 1.0 1.0] [1.0 0.0 1.0]])
+                 outputs inputs
                  weights (tf/variable (repeatedly 3 (fn [] (repeatedly 2 #(dec (rand 2))))))
                  bias (tf/variable (repeatedly 4 (fn [] (repeatedly 2 #(dec (rand 2))))))
                  weights2 (tf/variable (repeatedly 2 (fn [] (repeatedly 3 #(dec (rand 2))))))
@@ -228,11 +228,10 @@
                                      weights2))
                  error (tf/sum (tf/pow (tf/sub outputs network) (tf/constant 2.))
                                (tf/constant 1))]
-             (first
               (run
                 [(tf/global-variables-initializer)
-                 (repeat 1000 (tf.optimizers/gradient-descent :weights [error weights bias weights2]))
-                 (tf/mean error)]))) 0.2)))
+                 (repeat 500 (tf.optimizers/gradient-descent error :learning-rate 20. :weights [weights bias weights2]))
+                 (tf/mean error)])) 0.2)))
 
     (deftest test-layer-fns
       (let [x (tf/constant [[1. 0. 1.]])
