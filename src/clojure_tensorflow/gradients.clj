@@ -28,10 +28,17 @@
                    (fn [& in] (first in))]
          "Mul" [(fn [& in] (second in))
                 (fn [& in] (first in))]
-         "Div" [(fn [& in] (second in))
-                (fn [& in] (first in))]
+         "Div" [(fn [& in] (ops/pow (second in) (ops/constant -1.)))
+                (fn [& in] (ops/sub (ops/constant 0.)
+                                    (ops/mult (first in)
+                                                (ops/pow (second in) (ops/constant -2.)))))]
+         ;; TODO
+         ;; "Transpose" [(fn [& in] (first in)
+         ;;               #_(prn "IN" in)
+         ;;               #_(ops/transpose (first in)))]
+         "Sum" [(fn [& in] (ops/constant 1.))]
          "Sigmoid" [(fn [& in] (ops/mult (ops/sigmoid (first in))
-                                        (ops/sub (ops/constant 1.) (ops/sigmoid (first in)))))]
+                                         (ops/sub (ops/constant 1.) (ops/sigmoid (first in)))))]
          }))
 
 (defn register-gradient [op-type functions]
