@@ -2,7 +2,8 @@
   (:require
    [clojure-tensorflow.build :as build]
    [clojure-tensorflow.utils :as utils]
-   [clojure-tensorflow.ops :as ops]))
+   [clojure-tensorflow.ops :as ops]
+))
 
 
 (defn get-op-by-name [n]
@@ -30,6 +31,7 @@
                 (fn [& in] (first in))]
          "Div" [(fn [& in] (second in))
                 (fn [& in] (first in))]
+         "Sum" [(fn [& in] (ops/sum (first in)))]
          "Sigmoid" [(fn [& in] (ops/mult (ops/sigmoid (first in))
                                         (ops/sub (ops/constant 1.) (ops/sigmoid (first in)))))]
          }))
@@ -40,9 +42,16 @@
 (defn get-registered-gradient
   [node]
   (let [{output :output which :which} node]
-    (apply (which (get @registered-gradients (.type (.op output)))) (get-inputs output))))
+    (try
+      (apply (which (get @registered-gradients (.type (.op output)))) (get-inputs output))
+      (catch java.lang.NullPointerException e
+        (throw (Exception. (str "No gradient has been registered for operation type: \"" (.type (.op output))
+                                "\". Try registering one with clojure-tensorflow.gradients/register-gradient"
+                                )))
+        ))
+    ))
 
-(defn collate-paths [from to path-atom path]
+(defn- collate-paths [from to path-atom path]
   (let [dependents (filter (partial depends-on? to) (get-inputs from))
         which-dependents (map #(.indexOf (get-inputs from) %) dependents)]
     (if (= from to)
@@ -109,6 +118,6 @@
    (ops/constant 0.000001)))
 
 (defn apply-gradients
-  [xs gradients]
+  [variables gradients]
   (map #(ops/assign %1 (ops/sub %1 %2))
-       xs gradients))
+       variables gradients))

@@ -2,7 +2,8 @@
   (:require
    [clojure-tensorflow.build :as build :refer [op-builder]]
    [clojure-tensorflow.utils :as utils]
-   ))
+
+   [clojure-tensorflow.ops :as tf]))
 
 (defn global-variables-initializer []
   @build/global-variables)
@@ -66,11 +67,12 @@
     :inputs [a b]}))
 
 (defn sum
-  ([t] (sum t (constant 0)))
-  ([t dims]
+  ([t] (sum t (constant 0) false))
+  ([t dims] (sum t (constant 0) false))
+  ([t dims keep-dims]
    (op-builder
     {:operation "Sum"
-     :attrs {:keep_dims true}
+     :attrs {:keep_dims keep-dims}
      :inputs [t dims]})))
 
 (defn tanh [a]
@@ -109,6 +111,11 @@
   (op-builder
    {:operation "Mean"
     :inputs [a (constant 0)]}))
+
+(defn size [a]
+  (op-builder
+   {:operation "Size"
+    :inputs [a]}))
 
 (defn transpose [a]
   (op-builder
@@ -156,6 +163,16 @@
      :attrs {:axis axis}}
     ))
   ([value] (stack value 0)))
+
+(defn cast [a dtype]
+  (op-builder
+   {:operation "Cast"
+    :inputs [a]
+    :attrs {:DstT dtype}
+    }))
+
+(def to-float #(cast % float32))
+(def to-int32 #(cast % int32))
 
 (def float32 org.tensorflow.DataType/FLOAT)
 (def int32 org.tensorflow.DataType/INT32)
