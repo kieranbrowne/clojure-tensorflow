@@ -164,6 +164,12 @@
     ))
   ([value] (stack value 0)))
 
+(def float32 org.tensorflow.DataType/FLOAT)
+(def int32 org.tensorflow.DataType/INT32)
+(def int64 org.tensorflow.DataType/INT64)
+(def float64 org.tensorflow.DataType/DOUBLE)
+
+
 (defn cast [a dtype]
   (op-builder
    {:operation "Cast"
@@ -174,7 +180,3 @@
 (def to-float #(cast % float32))
 (def to-int32 #(cast % int32))
 
-(def float32 org.tensorflow.DataType/FLOAT)
-(def int32 org.tensorflow.DataType/INT32)
-(def int64 org.tensorflow.DataType/INT64)
-(def float64 org.tensorflow.DataType/DOUBLE)
