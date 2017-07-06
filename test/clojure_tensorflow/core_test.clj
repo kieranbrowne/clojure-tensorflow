@@ -233,7 +233,7 @@
               (run
                 [(tf/global-variables-initializer)
                  (repeat 1000 (tf.optimizers/gradient-descent error :learning-rate 20. :weights [weights bias weights2]))
-                 (tf/mean error)])) 0.2))))
+                 (tf/mean error)])) 0.3))))
 
     (deftest test-layer-fns
       (let [x (tf/constant [[1. 0. 1.]])
