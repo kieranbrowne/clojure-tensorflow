@@ -217,12 +217,14 @@
 
 
     (testing "Autoencoder"
+      (let [rand-seed (java.util.Random. 1)
+            rand-synapse #(dec (* 2 (.nextDouble rand-seed)))]
       (is (<
            (let [inputs (tf/constant [[0.0 0.0 1.0] [0.0 1.0 1.0] [1.0 1.0 1.0] [1.0 0.0 1.0]])
                  outputs inputs
-                 weights (tf/variable (repeatedly 3 (fn [] (repeatedly 2 #(dec (rand 2))))))
-                 bias (tf/variable (repeatedly 4 (fn [] (repeatedly 2 #(dec (rand 2))))))
-                 weights2 (tf/variable (repeatedly 2 (fn [] (repeatedly 3 #(dec (rand 2))))))
+                 weights (tf/variable (repeatedly 3 (fn [] (repeatedly 2 rand-synapse))))
+                 bias (tf/variable (repeatedly 4 (fn [] (repeatedly 2 rand-synapse))))
+                 weights2 (tf/variable (repeatedly 2 (fn [] (repeatedly 3 rand-synapse))))
                  network (tf/sigmoid
                           (tf/matmul (tf/sigmoid (tf/add (tf/matmul inputs weights) bias))
                                      weights2))
@@ -231,7 +233,7 @@
               (run
                 [(tf/global-variables-initializer)
                  (repeat 500 (tf.optimizers/gradient-descent error :learning-rate 20. :weights [weights bias weights2]))
-                 (tf/mean error)])) 0.2)))
+                 (tf/mean error)])) 0.2))))
 
     (deftest test-layer-fns
       (let [x (tf/constant [[1. 0. 1.]])
