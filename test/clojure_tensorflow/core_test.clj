@@ -27,7 +27,8 @@
             d (tf/sub b a)
             e (tf/mult a b)
             f (tf/pow a b)
-            g (tf/sigmoid a)]
+            g (tf/sigmoid a)
+            h (tf/div a b)]
 
         (testing "Gradients"
           (is (= (run (tf.gradients/gradients a a))
@@ -53,6 +54,12 @@
           (is (= (run (tf.gradients/gradients e b))
                  (float 3.))))
 
+        (testing "Gradients div"
+          (is (= (run (tf.gradients/gradients h a))
+                 (float 0.2)))
+          (is (= (run (tf.gradients/gradients h b))
+                 (float -0.12))))
+
         (testing "Gradients pow"
           (is (= (run (tf.gradients/gradients f a))
                  (float 405.))))
@@ -60,10 +67,9 @@
         (testing "Gradients pow"
           (is (= (run (tf.gradients/gradients f b))
                  (float 266.9628))))
-
-        (testing "Gradients sigmoid"
           (is (= (run (tf.gradients/gradients g a))
-                 (float 0.045176655))))))))
+                 (float 0.045176655)))))))
+
 
 (deftest test-basic-feed-forward-neural-network
   (let [input (tf/constant [[1. 0. 1.]])
@@ -208,6 +214,26 @@
                (tf/mean (tf/mean error))]))
 
            0.001)))
+
+
+    (testing "Autoencoder"
+      (let [rand-seed (java.util.Random. 1)
+            rand-synapse #(dec (* 2 (.nextDouble rand-seed)))]
+      (is (<
+           (let [inputs (tf/constant [[0.0 0.0 1.0] [0.0 1.0 1.0] [1.0 1.0 1.0] [1.0 0.0 1.0]])
+                 outputs inputs
+                 weights (tf/variable (repeatedly 3 (fn [] (repeatedly 2 rand-synapse))))
+                 bias (tf/variable (repeatedly 4 (fn [] (repeatedly 2 rand-synapse))))
+                 weights2 (tf/variable (repeatedly 2 (fn [] (repeatedly 3 rand-synapse))))
+                 network (tf/sigmoid
+                          (tf/matmul (tf/sigmoid (tf/add (tf/matmul inputs weights) bias))
+                                     weights2))
+                 error (tf/sum (tf/pow (tf/sub outputs network) (tf/constant 2.))
+                               (tf/constant 1))]
+              (run
+                [(tf/global-variables-initializer)
+                 (repeat 1000 (tf.optimizers/gradient-descent error :learning-rate 20. :weights [weights bias weights2]))
+                 (tf/mean error)])) 0.3))))
 
     (deftest test-layer-fns
       (let [x (tf/constant [[1. 0. 1.]])
