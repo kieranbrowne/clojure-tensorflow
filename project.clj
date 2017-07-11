@@ -5,4 +5,5 @@
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :lein-release {:deploy-via :clojars}
   :dependencies [[org.clojure/clojure "1.8.0"]
-                 [org.tensorflow/tensorflow  "1.2.0"]])
+                 [org.tensorflow/tensorflow  "1.2.0"]
+                 [environ "1.1.0"]])
