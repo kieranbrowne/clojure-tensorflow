@@ -1,17 +1,8 @@
 (ns clojure-tensorflow.build
-  (:require [clojure-tensorflow.utils :as utils]))
-
-(def default-graph (new org.tensorflow.Graph))
-(def ^:dynamic graph default-graph)
-
-;; As a design choice from tensorflow graph needs to be
-(def ^:dynamic global-variables (atom []))
-
-;; The shadow graph patches a couple of requirements while we wait for
-;; the Java api. We store all relevant information about operations as
-;; we add them to the graph. Eventually all of this will be extractable
-;; from the java graph / operations objects.
-(def ^:dynamic shadow-graph (atom []))
+  (:require
+   [clojure-tensorflow.graph
+    :refer [graph global-variables shadow-graph]]
+   [clojure-tensorflow.utils :as utils]))
 
 (defn op-builder
   "Returns a function which creates an operation for the graph"
@@ -20,7 +11,23 @@
    (let [{:keys [operation node-name attrs inputs]
           :or {node-name (str (gensym operation)) attrs {} inputs []}
           } op-profile
-         tf-operation (utils/thread graph
+
+         ;; convert clj values to tensorflow operations if necessary
+         inputs
+         (map #(if (= (type %) org.tensorflow.Output)
+                 %
+                 (op-builder
+                  {:operation "Const"
+                   :attrs
+                   {:dtype
+                    (.dataType
+                     (utils/clj->tensor %))
+                    :value
+                    (utils/clj->tensor %)
+                    }})) inputs)
+
+         tf-operation
+         (utils/thread graph
                        (flatten
                         [#(.opBuilder % operation node-name)
                          ;; set attributes if any
@@ -30,9 +37,7 @@
                           attrs)
                          ;; add inputs if any
                          (map (fn [input]
-                                #(.addInput %
-                                            (if (fn? input) (input graph) input)
-                                            )) inputs)
+                                #(.addInput % input)) inputs)
                          #(.build %)
                          #(.output % 0)]))
          ]

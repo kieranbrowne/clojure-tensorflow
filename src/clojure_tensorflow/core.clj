@@ -1,10 +1,11 @@
 (ns clojure-tensorflow.core
   (:require [clojure-tensorflow.utils :as utils]
-            [clojure-tensorflow.ops :as tf])
-  (:use [clojure-tensorflow.build :only [graph global-variables shadow-graph]]))
+            [clojure-tensorflow.ops :as ops]
+            [clojure-tensorflow.graph
+             :refer [graph global-variables shadow-graph]]
+            [clojure-tensorflow.session :refer [session]]))
 
 
-(def ^:dynamic session (org.tensorflow.Session. graph))
 
 (defn feed
   "Feed value to placeholder
