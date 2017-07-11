@@ -10,8 +10,6 @@
             [clojure-tensorflow.utils :as utils]))
 
 
-
-
 (deftest test-session-running
   (with-session
     (testing "Run simple operation in default graph"
@@ -348,3 +346,282 @@
                  )))
 
         ))))
+
+(deftest test-tensor-transformations
+  (with-graph
+    (with-session
+
+      (let [tensor
+            (tf/constant [[0 0 0 0 0]
+                          [0 0 0 1 0]
+                          [0 0 1 1 1]
+                          [0 0 0 1 0]
+                          [0 0 0 0 0]])]
+
+        (testing "Slice Operation"
+          (is (= [[0 1 0] [1 1 1] [0 1 0]])
+                 (run
+                   (tf/slice
+                    tensor
+                    (tf/constant [1 2])
+                    (tf/constant [3 3])
+                    ))))
+
+        (testing "Pad Operation"
+          (is (= [[0 0 1 0 0] [0 0 0 0 0]])
+                 (run
+                   (tf/pad
+                    (tf/constant [[1]])
+                    (tf/constant [[0 1] [2 2]])
+                    ))))
+
+        ))))
+
+
+(deftest convolutions
+  "Convolutional noughts and crosses"
+  (with-graph
+    (with-session
+      (let [cross (tf/constant
+                   [[1. 0. 1.]
+                    [0. 1. 0.]
+                    [1. 0. 1.]])
+            nought (tf/constant
+                    [[1. 1. 1.]
+                     [1. 0. 1.]
+                     [1. 1. 1.]])
+            input (tf/reshape
+                   (tf/constant
+                    (vector
+                     (run (tf/pad cross  (tf/constant [[3 1] [2 2]])))
+                     (run (tf/pad cross  (tf/constant [[0 4] [1 3]])))
+                     (run (tf/pad cross  (tf/constant [[2 2] [4 0]])))
+                     (run (tf/pad cross  (tf/constant [[4 0] [0 4]])))
+                     (run (tf/pad nought (tf/constant [[3 1] [2 2]])))
+                     (run (tf/pad nought (tf/constant [[0 4] [1 3]])))
+                     (run (tf/pad nought (tf/constant [[2 2] [4 0]])))
+                     (run (tf/pad nought (tf/constant [[4 0] [0 4]])))))
+                   (tf/constant [8 7 7 1])
+                   )
+            output (tf/one-hot (tf/constant [0 0 0 0 1 1 1 1]))
+            ]
+
+
+        (testing "Conv2D op"
+          (is (= (utils/to-floats [[[[19.0] [25.0]] [[37.0] [43.0]]]])
+                 (run (layer/conv2d
+                       (tf/reshape
+                        (tf/constant (map float (range 9)))
+                        (tf/constant [1 3 3 1]))
+                       (tf/reshape
+                        (tf/constant (map float (range 4)))
+                        (tf/constant [2 2 1 1]))
+                       "VALID"
+                       (long-array [1 1 1 1])
+                       )))))
+
+        ))))
+
+
+(deftest auto-type-conversion
+  (with-graph
+    (with-session
+
+      (testing "Scalar Int"
+        (is (= 2 (run (tf/add 1 1)))))
+
+      (testing "Scalar Float"
+        (is (= (float 2.0) (run (tf/add 1. 1.)))))
+
+      (testing "PersistentVector"
+        (is (= [[(float 2.0)]] (run (tf/add [[1.]] [[1.]])))))
+
+      (testing "PersistentList"
+        (is (= [[(float 2.0)]] (run (tf/add '((1.)) '((1.)))))))
+
+      (testing "Collection and Scalar"
+        (is (= [[(float 3.0)] [(float 6.)]]
+               (run (tf/mult '((1.) [2.]) 3.)))))
+
+      (testing "Reshape"
+        (is (= [[0 1 2] [3 4 5] [6 7 8]]
+               (run (tf/reshape
+                     (range 9)
+                     '(3 3)
+                     )))))
+      )))
+
+(deftest parsed-gradients
+  (with-graph
+    (with-session
+
+      (let [x (tf/constant 9.0)
+            y (tf/constant -2.0)]
+
+        (testing "NegGrad"
+          (is (= -1.0
+                 (run
+                   (tf.gradients/parsed-grad
+                    (build/op-builder {:operation "Neg" :inputs [x]})
+                    x)))))
+
+        (testing "SqrtGrad"
+          (is (= 0.1666666716337204
+                 (run
+                   (tf.gradients/parsed-grad
+                    (build/op-builder {:operation "Sqrt" :inputs [x]})
+                    x)))))
+
+        (testing "SinGrad"
+          (is (= -0.416146844625473
+                 (run
+                   (tf.gradients/parsed-grad
+                    (build/op-builder {:operation "Sin" :inputs [y]})
+                    y)))))
+
+        (testing "DivGrad w.r.t x"
+          (is (= -0.5
+                 (run
+                   (tf.gradients/parsed-grad
+                    (build/op-builder {:operation "Div" :inputs [x y]})
+                    x)))))
+
+        (testing "DivGrad w.r.t y"
+          (is (= -2.25
+                 (run
+                   (tf.gradients/parsed-grad
+                    (build/op-builder {:operation "Div" :inputs [x y]})
+                    y)))))
+
+        (testing "SigmoidGrad"
+          (is (= 1.2336639338172972E-4
+                 (run
+                   (tf.gradients/parsed-grad
+                    (build/op-builder {:operation "Sigmoid" :inputs [x]})
+                    x)))))
+
+        (testing "TanhGrad"
+          (is (= 0.07065081596374512
+                 (run
+                   (tf.gradients/parsed-grad
+                    (build/op-builder {:operation "Tanh" :inputs [y]})
+                    y)))))
+
+        ))))
+
+
+
+
+;; (with-graph
+;;   (with-session
+;;     (let [x (tf/constant 9.0)
+;;           y (tf/constant -2.0)
+;;           z (build/op-builder {:operation "Maximum" :inputs [y x]})]
+
+;;       (run
+;;         (tf.gradients/parsed-grad z y)
+;;         )
+;;       )))
+
+
+;; (with-graph
+;;   (with-session
+;;     (let [cross (tf/constant
+;;                  [[1. 0. 1.]
+;;                   [0. 1. 0.]
+;;                   [1. 0. 1.]])
+;;           nought (tf/constant
+;;                   [[1. 1. 1.]
+;;                    [1. 0. 1.]
+;;                    [1. 1. 1.]])
+;;           input (tf/constant
+;;                   (vector
+;;                    (run (tf/pad cross  (tf/constant [[3 1] [2 2]])))
+;;                    (run (tf/pad cross  (tf/constant [[0 4] [1 3]])))
+;;                    (run (tf/pad cross  (tf/constant [[2 2] [4 0]])))
+;;                    (run (tf/pad cross  (tf/constant [[4 0] [0 4]])))
+;;                    (run (tf/pad nought (tf/constant [[3 1] [2 2]])))
+;;                    (run (tf/pad nought (tf/constant [[0 4] [1 3]])))
+;;                    (run (tf/pad nought (tf/constant [[2 2] [4 0]])))
+;;                    (run (tf/pad nought (tf/constant [[4 0] [0 4]])))))
+;;           target (tf/to-float (tf/one-hot (tf/constant [0 0 0 0 1 1 1 1])))
+
+;;           filter (tf/variable (tf/random-normal [3 3 1 1]))
+
+;;           input (tf/reshape input '(-1 7 7 1))
+;;           conv1 (layer/conv2d input filter)
+;;           mpool (layer/max-pool conv1 (long-array [1 2 2 1]))
+;;           rshap (tf/reshape mpool [-1 9])
+;;           output (layer/linear rshap 2)
+
+;;           error (tf/square (tf/sub target output))
+;;           ]
+
+;;       (run (tf/global-variables-initializer))
+
+
+;;       ;; (run (tf.gradients/gradient (tf/reshape )))
+
+;;       (run (tf.gradients/gradient error rshap))
+;;       (run
+;;         (tf.gradients/gradient error filter))
+
+;;       )))
+
+
+;; (org.tensorflow.Tensor/create
+;;  (tf/constant 1))
+
+;; (let [x (tf/constant 1)
+;;       y (tf/reshape x (tf/constant [1]))]
+;;   (apply (first (get @tf.gradients/registered-gradients
+;;         (->
+;;          (tf.gradients/paths y x)
+;;          first first
+;;          :output
+;;          .op
+;;          .type
+;;          )))
+;;    (->
+;;     (tf.gradients/paths y x)
+;;     first first
+;;     :output
+;;     tf.gradients/get-inputs )
+;;    )
+;;   )
+
+
+;; (utils/->clj (.shape (tf/constant [1. 4.])))
+
+
+;; (with-graph
+;;   (with-session
+;;     (let [cross (tf/constant
+;;                  [[1. 0. 1.]
+;;                   [0. 1. 0.]
+;;                   [1. 0. 1.]])
+;;           nought (tf/constant
+;;                   [[1. 1. 1.]
+;;                    [1. 0. 1.]
+;;                    [1. 1. 1.]])
+;;           input (tf/constant
+;;                  (clojure.walk/postwalk
+;;                   #(if (number? %) (vector %) %)
+;;                   (vector
+;;                    (run (tf/pad cross  (tf/constant [[3 1] [2 2]])))
+;;                    (run (tf/pad cross  (tf/constant [[0 4] [1 3]])))
+;;                    (run (tf/pad cross  (tf/constant [[2 2] [4 0]])))
+;;                    (run (tf/pad cross  (tf/constant [[4 0] [0 4]])))
+;;                    (run (tf/pad nought (tf/constant [[3 1] [2 2]])))
+;;                    (run (tf/pad nought (tf/constant [[0 4] [1 3]])))
+;;                    (run (tf/pad nought (tf/constant [[2 2] [4 0]])))
+;;                    (run (tf/pad nought (tf/constant [[4 0] [0 4]]))))))
+;;           ]
+
+;;       (run (tf/conv2d
+;;             input
+;;             (tf/constant (tf/random-normal [5 5 1 2]))
+;;             ))
+
+
+;;       )))

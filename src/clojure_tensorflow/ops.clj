@@ -1,12 +1,13 @@
 (ns clojure-tensorflow.ops
   (:require
    [clojure-tensorflow.build :as build :refer [op-builder]]
+   [clojure-tensorflow.graph :as graph]
    [clojure-tensorflow.utils :as utils]
 
    [clojure-tensorflow.ops :as tf]))
 
 (defn global-variables-initializer []
-  @build/global-variables)
+  @graph/global-variables)
 
 ;; value ops
 
@@ -34,7 +35,7 @@
             :attrs {:shape (utils/tensor->shape tensor)
                     :dtype (.dataType tensor)}
             } bits))]
-     (swap! build/global-variables conj (assign var val))
+     (swap! graph/global-variables conj (assign var val))
      var)))
 
 (defn placeholder [node-name datatype]
@@ -83,6 +84,62 @@
 (defn sigmoid [a]
   (op-builder
    {:operation "Sigmoid"
+    :inputs [a]}))
+
+(defn relu [a]
+  (op-builder
+   {:operation "Relu"
+    :inputs [a]}))
+
+(defn softmax [a]
+  (op-builder
+   {:operation "Softmax"
+    :inputs [a]}))
+
+(defn maximum [a b]
+  (op-builder
+   {:operation "Maximum"
+    :inputs [a b]}))
+
+(defn reduce-max [a]
+  (op-builder
+   {:operation "Max"
+    :inputs [a (constant -1)]}))
+
+(defn minimum [a b]
+  (op-builder
+   {:operation "Minimum"
+    :inputs [a b]}))
+
+(defn gather [params indices]
+  (op-builder
+   {:operation "Gather"
+    :attrs {:validate_indices true}
+    :inputs [params indices]}))
+
+(defn slice [input begin size]
+  (op-builder
+   {:operation "Slice"
+    :inputs [input begin size]}))
+
+(defn pad [input paddings]
+  (op-builder
+   {:operation "Pad"
+    :inputs [input paddings]}))
+
+(defn reshape [input shape]
+  (op-builder
+   {:operation "Reshape"
+    :inputs [input shape]}))
+
+(defn concat [tensors axis]
+  (op-builder
+   {:operation "Concat"
+    :inputs [tensors axis]}))
+
+(defn neg [a]
+  (op-builder
+   {:operation "Neg"
     :inputs [a]}))
 
 (defn pow [a b]
@@ -180,3 +237,21 @@
 (def to-float #(cast % float32))
 (def to-int32 #(cast % int32))
 
+
+(defn one-hot
+  ([indices depth on-value off-value]
+   (op-builder
+    {:operation "OneHot"
+     :inputs [(to-int32 indices) (to-int32 depth) on-value off-value]}))
+  ([indices depth] (one-hot indices depth (constant 1) (constant 0)))
+  ([indices] (one-hot indices (add (constant 1) (to-int32 (reduce-max indices))) (constant 1) (constant 0)))
+  )
+
+(defn random-normal
+  "Generate a tensor of random values with a normal distribution"
+  ([shape stddev]
+   (let [source (java.util.Random. (rand))]
+     ((reduce #(partial repeatedly %2 %1)
+              #(.nextGaussian source)
+              (reverse shape)))))
+  ([shape] (random-normal shape 0.35)))

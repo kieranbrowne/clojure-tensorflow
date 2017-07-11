@@ -91,7 +91,6 @@
 
 (def to-floats (partial clojure.walk/postwalk #(if (coll? %) % (float %))))
 
-
 (defn thread
   "Approximately equivalent to -> macro.
   Required because -> must run at compile time"

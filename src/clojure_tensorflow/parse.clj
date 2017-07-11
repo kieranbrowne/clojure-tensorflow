@@ -28,7 +28,7 @@
     #(str "{{\"" (nth %1 1) "\"}, "
           "\"Const\", " ;operation
           "{}, " ;inputs
-          "{{\"dtype\", \"$T\"}, {\"value\", \"$T\"}}}" ;attrs
+          "{{\"dtype\", \"$T\"}, {\"value\", " (nth %1 2) "}}}" ;attrs
           )))
 
 ;; Directory
@@ -54,7 +54,7 @@
 
 (def matches
   (re-seq
-   #"Status\s(\w+).*?(?=return)?\sGradFor\w+Cwise\(g\,\s([^;]+)"
+   #"Status\s(\w+).*?(?=return)?\sGradFor(\w+)Cwise\(g\,\s([^;]+)"
    math-grad))
 
 (def lookup
@@ -66,28 +66,35 @@
   (reduce merge
    (map
     (fn [m] {(nth m 1)
-            (apply str (drop-last (nth m 2)))})
+            {:type (nth m 2)
+             :gradient
+             (apply str (drop-last (nth m 3)))}})
     matches
     )))
+
 
 (def gradients
   (apply merge
          (map #(if (get nodes (second %))
-                 (try
-                   {(first %)
-                    (map to-op-def
-                         (-> (get nodes (second %))
-                             (handle-fdh)
-                             (string/replace "{" "[")
-                             (string/replace "}" "]")
-                             read-string
-                             ))}
-                   ;just discard breaking ops for now
-                   (catch Exception e nil)))
+                 (let [n (get nodes (second %))]
+                     (try
+                       {(first %)
+                        {:type (:type n)
+                         :gradient
+                         (map to-op-def
+                              (-> (:gradient n)
+                                  (handle-fdh)
+                                  (string/replace "{" "[")
+                                  (string/replace "}" "]")
+                                  read-string
+                                  ))}}
+                                        ;just discard breaking ops for now
+                       (catch Exception e nil))))
               lookup)))
 
 
 
+(keys gradients)
 
 ;; generate gradients file
 (spit "resources/gradients.edn"
