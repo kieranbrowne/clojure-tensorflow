@@ -4,6 +4,9 @@
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :lein-release {:deploy-via :clojars}
-  :dependencies [[org.clojure/clojure "1.8.0"]
+  :dependencies [[org.clojure/clojure  "1.9.0-alpha16"]
                  [org.tensorflow/tensorflow  "1.2.0"]
-                 [environ "1.1.0"]])
+                 [org.clojars.kieran/autodiff "0.1.2-SNAPSHOT"]
+                 [environ "1.1.0"]]
+  :plugins [[lein-cloverage "1.0.9"]]
+  )

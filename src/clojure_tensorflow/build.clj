@@ -1,7 +1,7 @@
 (ns clojure-tensorflow.build
   (:require
    [clojure-tensorflow.graph
-    :refer [graph global-variables shadow-graph]]
+    :refer [graph global-variables shadow-graph shadow-graph']]
    [clojure-tensorflow.utils :as utils]))
 
 (defn op-builder
@@ -42,4 +42,18 @@
                          #(.output % 0)]))
          ]
      (swap! shadow-graph conj (assoc op-profile :name node-name :attrs attrs :inputs inputs :tf-op tf-operation))
+     (swap! shadow-graph' assoc (keyword node-name) {:operation operation :attrs attrs :inputs (doall (map #(keyword (.name (.op %))) inputs))})
      tf-operation)))
+
+
+(defn build-op [op-name]
+  (let [op-def (op-name @shadow-graph')]
+       (-> op-def
+           (update :input (partial map build-op))
+           op-builder
+       )))
+
+
+;; (defn shadow-builder [definition]
+;;   (fn [] 1)
+;;   )

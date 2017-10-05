@@ -10,3 +10,4 @@
 ;; we add them to the graph. Eventually all of this will be extractable
 ;; from the java graph / operations objects.
 (def ^:dynamic shadow-graph (atom []))
+(def ^:dynamic shadow-graph' (atom {}))

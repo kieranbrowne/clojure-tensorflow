@@ -3,21 +3,45 @@
    [clojure-tensorflow.build :as build :refer [op-builder]]
    [clojure-tensorflow.graph :as graph]
    [clojure-tensorflow.utils :as utils]
-
-   [clojure-tensorflow.ops :as tf]))
+   [autodiff.protocols :as ad]
+   [autodiff.core :refer [extend-types]]
+   [clojure.spec.alpha :as s]
+   ))
 
 (defn global-variables-initializer []
   @graph/global-variables)
+
+(s/def ::operation string?)
+(s/def ::attrs map?)
+(s/def ::op-name keyword?)
+(s/def ::inputs (s/coll-of ::op-name))
+
+(s/def ::op-def
+  (s/keys :req-un  [::operation]
+          :opt-un  [::attrs ::inputs]))
+
+(defn add-shadow-op
+  "Coerce op-def, add to shadow graph and return its key"
+  ([op-def op-name]
+   {:pre [(s/valid? ::op-def op-def)]
+    :post [(s/valid? ::op-name %)]}
+   (let []
+     (swap! graph/shadow-graph' assoc op-name op-def)
+     op-name))
+  ([op-def] (add-shadow-op op-def (keyword (gensym (:operation op-def)))))
+  )
+
 
 ;; value ops
 
 (defn constant [val]
   (let [tensor (utils/clj->tensor val)]
-    (op-builder
+    (add-shadow-op
      {:operation "Const"
       :attrs {:dtype (.dataType tensor)
               :value tensor
               }})))
+
 
 (defn assign [var val]
   (op-builder
@@ -38,32 +62,75 @@
      (swap! graph/global-variables conj (assign var val))
      var)))
 
-(defn placeholder [node-name datatype]
-  (op-builder
+(defn placeholder [datatype]
+  (add-shadow-op
    {:operation "Placeholder"
-    :node-name (name node-name)
+    ;; :node-name (name node-name)
     :attrs {:dtype datatype}
     }))
+
+
+(defn tf-val? [x]
+  (or (= (type x) org.tensorflow.Output)
+      (= (type x) org.tensorflow.Operation)))
+
+(extend-types
+ [java.lang.Number
+  java.lang.Long
+  java.lang.Double]
+
+ ad/AutoDiff
+
+ (constant [a]
+           (let [tensor (utils/clj->tensor (double a))]
+             (op-builder
+              {:operation "Const"
+               :attrs {:dtype (.dataType tensor)
+                       :value tensor
+                       }}))))
+
+(extend-types
+ [org.tensorflow.Output
+  org.tensorflow.Operation]
+
+ ad/AutoDiff
+
+ (constant [a] a)
+
+ (mul [a b]
+      (if (and (tf-val? a) (tf-val? b))
+        (op-builder
+         {:operation "Mul"
+          :inputs [a b]})
+        (ad/mul (ad/coerce a) (ad/coerce b))))
+
+ (add [a b]
+      (if (and (tf-val? a) (tf-val? b))
+        (op-builder
+         {:operation "Add"
+          :inputs [a b]})
+        (ad/add (ad/coerce a) (ad/coerce b))))
+ )
 
 ;; math ops
 
 (defn mult [a b]
-  (op-builder
+  (add-shadow-op
    {:operation "Mul"
     :inputs [a b]}))
 
 (defn div [a b]
-  (op-builder
+  (add-shadow-op
    {:operation "Div"
     :inputs [a b]}))
 
 (defn add [a b]
-  (op-builder
+  (add-shadow-op
    {:operation "Add"
     :inputs [a b]}))
 
 (defn sub [a b]
-  (op-builder
+  (add-shadow-op
    {:operation "Sub"
     :inputs [a b]}))
 

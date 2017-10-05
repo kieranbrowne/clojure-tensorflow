@@ -7,7 +7,9 @@
             [clojure-tensorflow.gradients :as tf.gradients]
             [clojure-tensorflow.optimizers :as tf.optimizers]
             [clojure-tensorflow.layers :as layer]
-            [clojure-tensorflow.utils :as utils]))
+            [clojure-tensorflow.utils :as utils]
+            [autodiff.protocols :as ad]
+            ))
 
 
 (deftest test-session-running
@@ -450,6 +452,31 @@
                      '(3 3)
                      )))))
       )))
+
+(deftest autodiff
+  (with-graph
+    (with-session
+
+      (let [x (tf/constant 9.0)
+            y (tf/constant -2.0)]
+
+        (testing "Running a dual type"
+          (is (= (ad/->Dual 6. 0.)
+                 (run (ad/add (tf/constant 2.)
+                              (ad/coerce (tf/constant 4.))))
+                 (run (ad/add (ad/coerce (tf/constant 2.))
+                              (tf/constant 4.)))
+                 )))
+
+        (testing "Derivative of a constant"
+          (is (= 0. (run (ad/d ad/constant 20.4)))))
+
+        (testing "Derivative of addition"
+          (is (= 1. (run (ad/d ad/add
+                               (ad/coerce (tf/constant 1.))
+                               (tf/constant 2.))))))
+        ))))
+
 
 (deftest parsed-gradients
   (with-graph
