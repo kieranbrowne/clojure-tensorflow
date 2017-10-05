@@ -41,14 +41,16 @@
        (do (-> session .runner (feed feed-map))
            (last (map #(run % feed-map) (flatten op)))))
      ;; if run on a single op return it
-     (-> session
-         .runner
-         (feed feed-map)
-         (.fetch (get-name (build/build-op op)))
-         .run
-         (.get 0)
-         utils/tensor->clj
-         ))))
+     (do
+       (build/build-op op)
+       (-> session
+           .runner
+           (feed feed-map)
+           (.fetch (get-name (build/build-op op)))
+           .run
+           (.get 0)
+           utils/tensor->clj
+           )))))
 
 
 
@@ -71,17 +73,18 @@
   (with-session
     (let [a (ops/constant 2.)
           b (ops/constant 3.)
-          c (ops/add a b)
           d (ops/placeholder org.tensorflow.DataType/FLOAT)
+          c (ops/add a d)
           ]
-      (run [c
-            b
+      (run
+            c
             ;; (.name a)
             ;; (build/build-op c)
             ;; (build/build-op d)
-            ]
-        ;; {d 1}
+        {d 1.}
         )
+      ;; (build/build-op
+      ;;  (ops/placeholder org.tensorflow.DataType/FLOAT))
       ;; (get-name (build/build-op c))
       ;; (build/build-op c)
       ;; (build/build-op c)
