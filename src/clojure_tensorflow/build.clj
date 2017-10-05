@@ -47,10 +47,12 @@
 
 
 (defn build-op [op-name]
-  (let [op-def (op-name @shadow-graph')]
-       (-> op-def
-           (update :input (partial map build-op))
-           op-builder
+  (or (.operation graph (name op-name))
+      ;; if op not built yet build it
+   (-> (op-name @shadow-graph')
+       (update :inputs (partial map build-op))
+       (assoc :node-name (name op-name))
+       op-builder
        )))
 
 

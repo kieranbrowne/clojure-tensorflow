@@ -19,29 +19,32 @@
      (map (fn [[key val]]
             #(.feed % (name key) (utils/clj->tensor val))) feed-map))))
 
-(s/valid? :clojure-tensorflow.ops/op-def {:operation "3"})
+
+(defmulti get-name class)
+(defmethod get-name org.tensorflow.Output [o] (-> o .op .name))
+(defmethod get-name org.tensorflow.Operation [op] (-> op .name))
 
 
 (defn run
   "Call session runner on single op.
   Returns tensor object"
   ([op-name] (run op-name {}))
-  ([op-name feed-map]
+  ([op feed-map]
    ;; {:pre [(s/valid? ::op-name op-name)]}
-   (if (coll? op-name)
+   (if (coll? op)
      ;; if run on AutoDiff Dual type, run function and its derivative
-     (if (= (type op-name) (type (ad/->Dual 1 1)))
-       (-> op-name
+     (if (= (type op) (type (ad/->Dual 1 1)))
+       (-> op
            (update :f run)
            (update :f' run))
        ;; if run on a list of operations, run all and return the last
        (do (-> session .runner (feed feed-map))
-           (last (map #(run % feed-map) (flatten op-name)))))
+           (last (map #(run % feed-map) (flatten op)))))
      ;; if run on a single op return it
      (-> session
          .runner
          (feed feed-map)
-         (.fetch (.name (.op op-name)))
+         (.fetch (get-name (build/build-op op)))
          .run
          (.get 0)
          utils/tensor->clj
@@ -63,13 +66,26 @@
        (finally (.close session)))))
 
 
+
 (with-graph
   (with-session
     (let [a (ops/constant 2.)
           b (ops/constant 3.)
-          c (ops/add a b)]
-      (run
-        (build/build-op c))
+          c (ops/add a b)
+          d (ops/placeholder org.tensorflow.DataType/FLOAT)
+          ]
+      (run [c
+            b
+            ;; (.name a)
+            ;; (build/build-op c)
+            ;; (build/build-op d)
+            ]
+        ;; {d 1}
+        )
+      ;; (get-name (build/build-op c))
+      ;; (build/build-op c)
+      ;; (build/build-op c)
+      ;; d
       ;; (derivative)
       )
     )
@@ -77,26 +93,8 @@
 
 (with-graph
   (with-session
-    (let [a (ops/constant 1)
-          b (ops/constant 2)
-          c (ops/mult a b)]
+    (let []
       @shadow-graph'
       ;; (run (ad/d c))
       )
-    ))
-
-(def a (ops/constant 9.))
-(def b (ops/constant 2.))
-(run (ad/d (partial ad/mul a) b))
-(deref shadow-graph')
-
-(derivative :Const17695 1)
-
-(defn derivative
-  [op wrt]
-  (let [g @shadow-graph'
-        op (keyword op)
-        wrt (keyword wrt)]
-    (update g wrt #(ad/coerce % 1))
-    (op g)
     ))
