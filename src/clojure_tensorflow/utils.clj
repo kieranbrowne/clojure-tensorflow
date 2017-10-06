@@ -1,10 +1,13 @@
 (ns clojure-tensorflow.utils
   (:require [clojure-tensorflow.graph :as graph]
-            [clojure-tensorflow.session :as session])
+            [clojure-tensorflow.session :as session]
+            [autodiff.protocols :as ad]
+            )
   (:import [org.tensorflow
             Tensor
             Shape
-            DataType]))
+            DataType]
+           [autodiff.protocols.Dual]))
 
 (defn recursively
   "Apply function to all items in nested data structure if
@@ -35,26 +38,37 @@
         (java.util.Arrays/copyOfRange arr 1 (count arr)))
        (Shape/scalar))))
 
+(number? 1/3)
+
 (defn tf-vals [v]
   "Convert value into type acceptable to TensorFlow
   Persistent data structures become arrays
   Longs become 32bit integers
   Doubles become floats"
   (cond
+    (= (class v) autodiff.protocols.Dual)
+    (do (println "its a dual")
+        (.op(:f v)))
+
     (coll? v)
-    (if (coll? (first v))
-      (to-array (map tf-vals v))
-      (case (.getName (type (first v)))
-        "java.lang.Long" (int-array v)
-        "java.lang.Int" (int-array v)
-        "java.lang.Double" (float-array v)
-        "java.lang.Float" (float-array v)))
-    (= (.getName (type v)) "java.lang.Long") (int v)
-    (= (.getName (type v)) "java.lang.Int") (int v)
-    (= (.getName (type v)) "java.lang.Double") (float v)
-    (= (.getName (type v)) "java.lang.Float") (float v)
+      (if (coll? (first v))
+        (to-array (map tf-vals v))
+        (cond
+          (number? (first v)) (float-array v)
+
+          (= (class (first v)) org.tensorflow.Output) v
+          (= (class (first v)) autodiff.protocols.Dual)
+          (do (println "its a dual")
+              (float 0))
+
+          :default
+          (do (println v)
+              (println (class v))
+              (float 0))
+          ))
+    (number? v) (float v)
     ;; anything else
-    true v))
+    :default v))
 
 
 (defn output-shape [tensor]

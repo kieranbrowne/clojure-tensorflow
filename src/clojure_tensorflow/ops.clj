@@ -6,7 +6,9 @@
    [autodiff.protocols :as ad]
    [autodiff.core :refer [extend-types]]
    [clojure.spec.alpha :as s]
-   ))
+   )
+  (:import [autodiff.protocols.AutoDiff]))
+
 
 (defn global-variables-initializer []
   @graph/global-variables)
@@ -14,37 +16,140 @@
 (s/def ::operation string?)
 (s/def ::attrs map?)
 (s/def ::op-name keyword?)
-(s/def ::inputs (s/coll-of ::op-name))
+(s/def ::ad-fn
+  (-> ad/AutoDiff :impls (get clojure.lang.Keyword) keys set))
+(s/def ::dual-op
+  (s/keys :req-un [::f ::f']))
+
+(s/def ::inputs (s/coll-of (s/or :single ::op-name
+                                 :dual ::dual-op)))
+
+(s/valid? ::inputs [:1 ])
 
 (s/def ::op-def
   (s/keys :req-un  [::operation]
-          :opt-un  [::attrs ::inputs]))
+          :opt-un  [::attrs ::inputs ::ad-fn]))
+
+(defn rebuild-op [op-name]
+  (try
+    (let [{:keys [ad-fn inputs]} (op-name @graph/shadow-graph')]
+      (apply
+       (-> ad/AutoDiff :impls (get (class (first inputs))) ad-fn)
+       inputs))
+    (catch java.lang.NullPointerException e
+      (str "test")
+      ;; (throw (Exception. "my exception message"))
+      '())
+    ;; (catch java.lang.IllegalArgumentException e
+    ;;   (str "caught exception: " (.getMessage e)))
+    ;; (catch Exception e
+    ;;   (str "caught exception: " (.getMessage e)))
+    ))
+
+
+(defn prime [op-name]
+  {:pre [(s/valid? ::op-name op-name)]
+   :post [(s/valid? ::op-name %)]}
+  (keyword (str (name op-name) "'")))
+
+(defn leibniz-notation [y x]
+  {:pre [(s/valid? ::op-name y) (s/valid? ::op-name x)]
+   :post [(s/valid? ::op-name %)]}
+  (keyword (str "d" (name y) "/d" (name x))))
+
+
+(s/fdef add-shadow-op
+        :args (s/cat :op-def ::op-def :op-name ::op-name)
+        :ret ::op-name)
 
 (defn add-shadow-op
   "Coerce op-def, add to shadow graph and return its key"
   ([op-def op-name]
-   {:pre [(s/valid? ::op-def op-def)]
+   {:pre [(s/valid? ::op-def op-def) (s/valid? ::op-name op-name)]
     :post [(s/valid? ::op-name %)]}
-   (let []
-     (swap! graph/shadow-graph' assoc op-name op-def)
-     op-name))
+   (when-not (contains? @graph/shadow-graph op-name)
+     ;; (swap! graph/shadow-graph' assoc (prime op-name)
+     ;;        (ad/coerce op-name 1))
+     (swap! graph/shadow-graph' assoc op-name op-def))
+         op-name)
   ([op-def] (add-shadow-op op-def (keyword (gensym (:operation op-def)))))
   )
 
 
-;; value ops
+;; (defn coerce [x f']
+;;   (let [dual (ad/coerce x f')])
+;;   (swap! graph/shadow-graph' assoc (prime (:f dual)) )
+;;   )
 
-(defn constant [val]
-  (let [tensor (utils/clj->tensor val)]
+
+;; (clojure.core/refer 'autodiff.protocols :rename {'constant 'const})
+
+(defmacro pull [ns vlist]
+  `(do ~@(for [i vlist]
+           `(def ~i ~(symbol (str ns "/" i))))))
+
+(pull autodiff.protocols (mul add sigmoid negate))
+
+(defn constant
+  ([val name]
+   (let [tensor (utils/clj->tensor val)]
+     (add-shadow-op
+      {:operation "Const"
+       :attrs {:dtype (.dataType tensor)
+               :value tensor
+               }} name)))
+  ([val]
+   (let [tensor (utils/clj->tensor val)]
+     (add-shadow-op
+      {:operation "Const"
+       :attrs {:dtype (.dataType tensor)
+               :value tensor
+               }}))))
+
+
+(extend-type
+    clojure.lang.Keyword
+
+  ad/AutoDiff
+
+  (add [a b]
     (add-shadow-op
-     {:operation "Const"
-      :attrs {:dtype (.dataType tensor)
-              :value tensor
-              }})))
+     {:operation "Add"
+      :inputs [a b]
+      :ad-fn :add}))
+  (mul [a b]
+    (add-shadow-op
+     {:operation "Mul"
+      :inputs [a b]
+      :ad-fn :mul}))
+  (sigmoid [a]
+    (add-shadow-op
+     {:operation "Sigmoid"
+      :inputs [a]
+      :ad-fn :sigmoid}))
+  (negate [a]
+    (add-shadow-op
+     {:operation "Neg"
+      :inputs [a]
+      :ad-fn :negate}))
+
+  (sub [a b]
+    (add-shadow-op
+     {:operation "Sub"
+      :inputs [a b]
+      :ad-fn :sub}))
+
+  (val-of-type [t v]
+    (case v
+      0 (constant v :zero)
+      1 (constant v :one)
+      (constant v)))
+  )
+;; value ops
 
 
 (defn assign [var val]
-  (op-builder
+  (add-shadow-op
    {:operation "Assign"
     :inputs [var (if (utils/tf-obj? val) val (constant val))]
     }))
@@ -53,7 +158,7 @@
   ([val] (variable val {}))
   ([val bits]
    (let [tensor (utils/clj->tensor val)
-         var (op-builder
+         var (add-shadow-op
           (merge
            {:operation "Variable"
             :attrs {:shape (utils/tensor->shape tensor)
@@ -74,65 +179,21 @@
   (or (= (type x) org.tensorflow.Output)
       (= (type x) org.tensorflow.Operation)))
 
-(extend-types
- [java.lang.Number
-  java.lang.Long
-  java.lang.Double]
 
- ad/AutoDiff
 
- (constant [a]
-           (let [tensor (utils/clj->tensor (double a))]
-             (op-builder
-              {:operation "Const"
-               :attrs {:dtype (.dataType tensor)
-                       :value tensor
-                       }}))))
 
-(extend-types
- [org.tensorflow.Output
-  org.tensorflow.Operation]
 
- ad/AutoDiff
 
- (constant [a] a)
-
- (mul [a b]
-      (if (and (tf-val? a) (tf-val? b))
-        (op-builder
-         {:operation "Mul"
-          :inputs [a b]})
-        (ad/mul (ad/coerce a) (ad/coerce b))))
-
- (add [a b]
-      (if (and (tf-val? a) (tf-val? b))
-        (op-builder
-         {:operation "Add"
-          :inputs [a b]})
-        (ad/add (ad/coerce a) (ad/coerce b))))
- )
 
 ;; math ops
 
-(defn mult [a b]
-  (add-shadow-op
-   {:operation "Mul"
-    :inputs [a b]}))
 
 (defn div [a b]
   (add-shadow-op
    {:operation "Div"
     :inputs [a b]}))
 
-(defn add [a b]
-  (add-shadow-op
-   {:operation "Add"
-    :inputs [a b]}))
 
-(defn sub [a b]
-  (add-shadow-op
-   {:operation "Sub"
-    :inputs [a b]}))
 
 (defn sum
   ([t] (sum t (constant 0) false))
@@ -144,135 +205,126 @@
      :inputs [t dims]})))
 
 (defn tanh [a]
-  (op-builder
+  (add-shadow-op
    {:operation "Tanh"
     :inputs [a]}))
 
-(defn sigmoid [a]
-  (op-builder
-   {:operation "Sigmoid"
-    :inputs [a]}))
-
 (defn relu [a]
-  (op-builder
+  (add-shadow-op
    {:operation "Relu"
     :inputs [a]}))
 
 (defn softmax [a]
-  (op-builder
+  (add-shadow-op
    {:operation "Softmax"
     :inputs [a]}))
 
 (defn maximum [a b]
-  (op-builder
+  (add-shadow-op
    {:operation "Maximum"
     :inputs [a b]}))
 
 (defn reduce-max [a]
-  (op-builder
+  (add-shadow-op
    {:operation "Max"
     :inputs [a (constant -1)]}))
 
 (defn minimum [a b]
-  (op-builder
+  (add-shadow-op
    {:operation "Minimum"
     :inputs [a b]}))
 
 (defn gather [params indices]
-  (op-builder
+  (add-shadow-op
    {:operation "Gather"
     :attrs {:validate_indices true}
     :inputs [params indices]}))
 
 (defn slice [input begin size]
-  (op-builder
+  (add-shadow-op
    {:operation "Slice"
     :inputs [input begin size]}))
 
 (defn pad [input paddings]
-  (op-builder
+  (add-shadow-op
    {:operation "Pad"
     :inputs [input paddings]}))
 
 (defn reshape [input shape]
-  (op-builder
+  (add-shadow-op
    {:operation "Reshape"
     :inputs [input shape]}))
 
 (defn concat [tensors axis]
-  (op-builder
+  (add-shadow-op
    {:operation "Concat"
     :inputs [tensors axis]}))
 
-(defn neg [a]
-  (op-builder
-   {:operation "Neg"
-    :inputs [a]}))
 
 (defn pow [a b]
-  (op-builder
+  (add-shadow-op
    {:operation "Pow"
     :inputs [a b]}))
 
 (def square #(pow % (constant 2.)))
 
 (defn log [a]
-  (op-builder
+  (add-shadow-op
    {:operation "Log"
     :inputs [a]}))
 
 (defn size [a]
-  (op-builder
+  (add-shadow-op
    {:operation "Size"
     :inputs [a]}))
 
 (defn abs [a]
-  (op-builder
+  (add-shadow-op
    {:operation "Abs"
     :inputs [a]}))
 
 (defn mean [a]
-  (op-builder
+  (add-shadow-op
    {:operation "Mean"
     :inputs [a (constant 0)]}))
 
 (defn size [a]
-  (op-builder
+  (add-shadow-op
    {:operation "Size"
     :inputs [a]}))
 
 (defn transpose [a]
-  (op-builder
+  (add-shadow-op
    {:operation "Transpose"
     :inputs [a (constant [1 0])]}))
 
 (defn matmul [a b]
-  (op-builder
+  (add-shadow-op
    {:operation "MatMul"
     :inputs [a b]}))
 
 (defn dot-a [a b]
-  (op-builder
+  (add-shadow-op
    {:operation "MatMul"
     :inputs [a b]
     :attrs {:transpose_a true}
     }))
 
 (defn dot-b [a b]
-  (op-builder
+  (add-shadow-op
    {:operation "MatMul"
     :inputs [a b]
     :attrs {:transpose_b true}
     }))
 
 (defn identity [a]
-  (op-builder
+  (add-shadow-op
    {:operation "Identity"
     :inputs [a]}))
 
 (defn unstack
   ([value num axis]
-   (op-builder
+   (add-shadow-op
     {:operation "Unpack"
      :inputs [value]
      :attrs {:num num
@@ -281,7 +333,7 @@
 
 (defn stack
   ([value axis]
-   (op-builder
+   (add-shadow-op
     {:operation "Pack"
      :inputs [value]
      :attrs {:axis axis}}
@@ -295,7 +347,7 @@
 
 
 (defn cast [a dtype]
-  (op-builder
+  (add-shadow-op
    {:operation "Cast"
     :inputs [a]
     :attrs {:DstT dtype}
@@ -307,7 +359,7 @@
 
 (defn one-hot
   ([indices depth on-value off-value]
-   (op-builder
+   (add-shadow-op
     {:operation "OneHot"
      :inputs [(to-int32 indices) (to-int32 depth) on-value off-value]}))
   ([indices depth] (one-hot indices depth (constant 1) (constant 0)))

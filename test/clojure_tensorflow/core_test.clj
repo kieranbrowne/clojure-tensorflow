@@ -257,22 +257,22 @@
   (with-graph
     (with-session
 
-      (let [x (tf/placeholder :x tf/float32)
-            y (tf/placeholder :y tf/float32)]
+      (let [x (tf/placeholder tf/float32)
+            y (tf/placeholder tf/float32)]
 
         (testing "Basic feed"
           (is (= (float 2.)
-                 (run (tf/identity x) {:x 2.}))))
+                 (run (tf/identity x) {x 2.}))))
 
         (testing "Basic feed into ops"
           (is (= (float 8.)
                  (run (tf/mult x y)
-                   {:x 2. :y 4.}))))
+                   {x 2. y 4.}))))
 
         (testing "Basic feed into ops"
           (is (= (map float [8. 2. 4.])
                  (run (tf/mult x y)
-                   {:x [2. 1. 2.] :y [4. 2. 2.]}))))
+                   {x [2. 1. 2.] y [4. 2. 2.]}))))
 
         ))))
 
@@ -285,8 +285,8 @@
 
         (testing "Neural net with infered variables feed"
           (is (<
-               (let [input (tf/placeholder :input tf/float32)
-                     target (tf/placeholder :target tf/float32)
+               (let [input (tf/placeholder tf/float32)
+                     target (tf/placeholder tf/float32)
                      syn-0 (tf/variable (repeatedly 3 #(repeatedly 5 rand-synapse)))
                      syn-1 (tf/variable (repeatedly 5 #(repeatedly 1 rand-synapse)))
                      hidden-layer (tf/sigmoid (tf/matmul input syn-0))
@@ -306,8 +306,8 @@
   (with-graph
     (with-session
 
-      (let [x (tf/placeholder :x tf/float32)
-            y (tf/placeholder :y tf/float32)
+      (let [x (tf/placeholder tf/float32)
+            y (tf/placeholder tf/float32)
             m (tf/variable 1.)
             b (tf/variable 0.)
             line-of-best-fit (tf/add (tf/mult m x) b)
