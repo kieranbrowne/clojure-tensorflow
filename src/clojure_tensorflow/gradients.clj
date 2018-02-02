@@ -38,21 +38,38 @@
 (defn path [a b]
   (loop [p [] step a]
     (if (not ((ancestors step) b))
-      p
+      (if (= step b) (conj p step) p)
       (recur
        (conj p step)
        (first
-        (filter #(contains? (ancestors %) b) (get-op-inputs step)))
+        (filter #(or (= % b) (contains? (ancestors %) b))
+                (get-op-inputs step)))
        )))
   )
 
 
-(if (empty? #{}) true false)
-(clojure.set/union #{1 2} #{2 3})
 
 (defn children
   [op-name]
-  (set (filter #(contains? (parents %) op-name) (keys @graph/shadow-graph'))))
+  (set (filter #(contains? (parents %) op-name)
+               (keys @graph/shadow-graph'))))
+
+(defn gradients [op op-wrt]
+  (when (empty? (path op op-wrt))
+    (throw (ex-info (str "Gradient does not exist because " op-wrt " does not feed into " op) {:op op :wrt op-wrt})))
+  (loop [p (reverse (path op op-wrt))
+         out (ad/wrt (first p))]
+    (if (not (> (count p) 1))
+      out
+      (recur
+       (rest p)
+       (let [op (second p)]
+         (apply (get-op-fn op)
+                (map #(if (= (first p) %) out %)
+                     (get-op-inputs op))
+                ))))))
+
+
 
 
 ;; (defn relevant-variables [op]
@@ -66,11 +83,6 @@
 ;; (def y (ops/constant 2))
 ;; (def z (ops/add x y))
 ;; (ad/d z x)
-
-(defn gradient [y x]
-  (let [g (update @graph/shadow-graph'
-                  x ad/wrt)]
-    (ad/d y)))
 
 
 ;; (gradient z x)
