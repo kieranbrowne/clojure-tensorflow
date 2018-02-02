@@ -1,4 +1,5 @@
 (ns clojure-tensorflow.ops
+  (:refer-clojure :exclude [cast concat identity])
   (:require
    [clojure-tensorflow.build :as build :refer [op-builder]]
    [clojure-tensorflow.graph :as graph]
@@ -6,14 +7,15 @@
    [autodiff.protocols :as ad]
    [autodiff.core :refer [extend-types]]
    [clojure.spec.alpha :as s]
-   )
+
+   [clojure-tensorflow.ops :as tf])
   (:import [autodiff.protocols.AutoDiff]))
 
 
 (defn global-variables-initializer []
   @graph/global-variables)
 
-(s/def ::operation string?)
+(s/def ::operation (s/or :name string? :key keyword?))
 (s/def ::attrs map?)
 (s/def ::op-name keyword?)
 (s/def ::ad-fn
@@ -65,8 +67,8 @@
 (defn add-shadow-op
   "Coerce op-def, add to shadow graph and return its key"
   ([op-def op-name]
-   {:pre [(s/valid? ::op-def op-def) (s/valid? ::op-name op-name)]
-    :post [(s/valid? ::op-name %)]}
+   ;{:pre [(s/valid? ::op-def op-def) (s/valid? ::op-name op-name)]
+    ;:post [(s/valid? ::op-name %)]}
    (when-not (contains? @graph/shadow-graph op-name)
      ;; (swap! graph/shadow-graph' assoc (prime op-name)
      ;;        (ad/coerce op-name 1))
@@ -88,7 +90,7 @@
   `(do ~@(for [i vlist]
            `(def ~i ~(symbol (str ns "/" i))))))
 
-(pull autodiff.protocols (mul add sigmoid negate))
+(pull autodiff.protocols (mul add sub sigmoid negate))
 
 (defn constant
   ([val name]
@@ -121,7 +123,8 @@
     (add-shadow-op
      {:operation "Mul"
       :inputs [a b]
-      :ad-fn :mul}))
+      :ad-fn :mul
+      }))
   (sigmoid [a]
     (add-shadow-op
      {:operation "Sigmoid"
@@ -144,6 +147,11 @@
       0 (constant v :zero)
       1 (constant v :one)
       (constant v)))
+  (val-like [t v]
+    (ad/add
+     (ad/mul t (constant 0))
+     (constant v))
+    )
   )
 ;; value ops
 

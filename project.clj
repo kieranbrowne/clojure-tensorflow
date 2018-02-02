@@ -6,7 +6,6 @@
   :lein-release {:deploy-via :clojars}
   :dependencies [[org.clojure/clojure  "1.9.0-alpha16"]
                  [org.tensorflow/tensorflow  "1.2.0"]
-                 [org.clojars.kieran/autodiff "0.1.2-SNAPSHOT"]
+                 [kieranbrowne/autodiff "0.1.5-SNAPSHOT"]
                  [environ "1.1.0"]]
-  :plugins [[lein-cloverage "1.0.9"]]
-  )
+  :plugins [[lein-cloverage "1.0.9"]])

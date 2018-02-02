@@ -33,13 +33,13 @@
          tf-operation
          (utils/thread graph
               (flatten
-              [#(.opBuilder % operation node-name)
+               [#(.opBuilder % (name operation) (name node-name))
                 ;; set attributes if any
                 (map
-                (fn [attr]
-                  #(.setAttr % (name (first attr))
+                 (fn [attr]
+                   #(.setAttr % (name (first attr))
                               (second attr)))
-                attrs)
+                 attrs)
                 ;; add inputs if any
                 (map (fn [input]
                        #(.addInput % (or (:f input) input))) inputs)
@@ -59,11 +59,12 @@
   [op-name]
   (or ;; if already on the graph just return it
    (try (.output (.operation graph (name op-name)) 0)
-           (catch Exception e))
+        (catch Exception e))
       ;; if op not built yet build it
       (-> (op-name @shadow-graph')
+          ;; ensure all inputs to op have been built
           (update :inputs (partial map build-op))
-          (assoc :node-name (name op-name))
+          (assoc :node-name op-name)
           op-builder
           )))
 

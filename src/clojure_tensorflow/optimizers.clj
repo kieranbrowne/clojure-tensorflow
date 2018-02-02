@@ -1,6 +1,7 @@
 (ns clojure-tensorflow.optimizers
   (:require [clojure-tensorflow.gradients
-             :refer [gradients apply-gradients relevant-variables]]
+             ;; :refer [gradients apply-gradients relevant-variables]
+             ]
             [clojure-tensorflow.ops :as tf]))
 
 ;; (defn gradient-descent
