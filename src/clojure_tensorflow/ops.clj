@@ -115,17 +115,17 @@
   ad/AutoDiff
 
   (add [a b]
-    (add-shadow-op
-     {:operation "Add"
-      :inputs [a b]
-      :ad-fn :add}))
+    (if (and (keyword? a) (keyword? b))
+      (add-shadow-op
+       {:operation "Add"
+        :inputs [a b]})
+      (ad/add (ad/coerce a) (ad/coerce b))))
+
   (mul [a b]
     (if (and (keyword? a) (keyword? b))
       (add-shadow-op
        {:operation "Mul"
-        :inputs [a b]
-        :ad-fn :mul
-        })
+        :inputs [a b]})
       (ad/mul (ad/coerce a) (ad/coerce b))
       ))
   (sigmoid [a]
@@ -385,3 +385,5 @@
               #(.nextGaussian source)
               (reverse shape)))))
   ([shape] (random-normal shape 0.35)))
+
+(pull autodiff.protocols (mul add sub sigmoid negate))

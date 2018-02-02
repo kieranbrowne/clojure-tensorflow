@@ -485,6 +485,9 @@
                      )))))
       )))
 
+(run (tf/add (tf/constant 2.)
+             (ad/coerce (tf/constant 4.))))
+
 (deftest autodiff
   (with-graph
     (with-session
@@ -505,7 +508,7 @@
 
         (testing "Derivative of addition"
           (is (= 1. (run (ad/d ad/add
-                               (ad/coerce (tf/constant 1.))
+                               (ad/wrt (tf/constant 1.))
                                (tf/constant 2.))))))
         ))))
 
