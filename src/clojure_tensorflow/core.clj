@@ -78,45 +78,36 @@
      (try ~@body
        (finally (.close session)))))
 
+
+
 (with-this-graph
-     {:x {:operation :Const
-          :attrs {:dtype (.dataType (utils/clj->tensor 3))
-                  :value (utils/clj->tensor 3)
-                  }}
-      :y {:operation :Const
-          :attrs {:dtype (.dataType (utils/clj->tensor 2))
-                  :value (utils/clj->tensor 2)
-                  }}
-      :z {:operation :Mul
-          :inputs [:x :wrty]}
-      }
-  (ad/wrt :y)
+  (->
+   {:x {:operation :Const
+        :attrs {:dtype (.dataType (utils/clj->tensor [3]))
+                :value (utils/clj->tensor [3])
+                }}
+    :y {:operation :Const
+        :attrs {:dtype (.dataType (utils/clj->tensor 2))
+                :value (utils/clj->tensor [2])
+                }}
+    :z {:operation :Mul :inputs [:x :y]}
+    :a {:operation :Mul :inputs [:x :z]}
+    })
 
-  ;; (build/build-op :z)
-  ;; (with-session (run :dzdx {:x 2.}))
-  ;; (build/build-op :y)
-  ;; (run (ad/wrt :y))
 
-  ;; (let [y' (ad/wrt :y)]
-  ;;   ;; (build/build-op y')
-  ;;   (run :z))
-
-  ;; (get-name
-  ;;  (build/build-op :y))
-  (with-session
-
-    (let [wrty (ad/wrt :y)
-          z (tf/mul :x wrty)]
-      (run (:f' z)))
-    )
-
-  ;; (with-session (run (ad/wrt :z) {:x 2.}))
-  ;; (ad/wrt :z)
   ;; (with-session
-  ;;   (build/build-op :x)
-  ;;   (build/build-op :y)
-  ;;   (build/build-op :z)
-  ;;   (run :x))
+  ;;   (run (gradient :a :y)))
+
+  (grad/path :x :y)
+  (with-session
+    (run
+      (grad/gradient :z :y)
+      ))
+  ;; (with-session
+  ;;   (run (gradient :z :y)))
+
+  ;; ((grad/ancestors :z) :y)
+
   )
 
 (with-this-graph

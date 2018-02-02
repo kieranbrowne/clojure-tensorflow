@@ -9,6 +9,16 @@
    [autodiff.protocols :as ad]
    ))
 
+(defn get-node [k]
+  (@graph/shadow-graph' k))
+
+(def op-fns
+  {:Mul ops/mul
+   :Add ops/add
+   })
+(def get-op-fn (comp op-fns keyword :operation get-node))
+
+(def get-op-inputs (comp :inputs get-node))
 
 (defn parents
   [op-name]
@@ -16,14 +26,25 @@
 
 (defn ancestors
   [op-name]
-  (loop [antecedents (parents op-name)
-         next-generation (reduce clojure.set/union (map parents op-name))]
-    (when (empty? next-generation)
-      antecedents
+  (loop [anc #{} xs [op-name]]
+    (let [generation (apply clojure.set/union (map parents xs))]
+      (if (empty? generation)
+        anc
+        (recur
+         (reduce clojure.set/union anc (map parents xs))
+         generation
+         )))))
+
+(defn path [a b]
+  (loop [p [] step a]
+    (if (not ((ancestors step) b))
+      p
       (recur
-       (clojure.set/union antecedents next-generation)
-       (reduce clojure.set/union (map parents op-name))
-       ))))
+       (conj p step)
+       (first
+        (filter #(contains? (ancestors %) b) (get-op-inputs step)))
+       )))
+  )
 
 
 (if (empty? #{}) true false)

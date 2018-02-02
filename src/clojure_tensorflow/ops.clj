@@ -120,11 +120,14 @@
       :inputs [a b]
       :ad-fn :add}))
   (mul [a b]
-    (add-shadow-op
-     {:operation "Mul"
-      :inputs [a b]
-      :ad-fn :mul
-      }))
+    (if (and (keyword? a) (keyword? b))
+      (add-shadow-op
+       {:operation "Mul"
+        :inputs [a b]
+        :ad-fn :mul
+        })
+      (ad/mul (ad/coerce a) (ad/coerce b))
+      ))
   (sigmoid [a]
     (add-shadow-op
      {:operation "Sigmoid"
