@@ -49,57 +49,57 @@
 
     ))
 
-  ;; (deftest test-gradients
-  ;;   (with-graph
-  ;;     (with-session
-  ;;       (let [a (tf/constant 3.)
-  ;;             b (tf/constant 5.)
-  ;;             c (tf/add a b)
-  ;;             d (tf/sub b a)
-  ;;             e (tf/mul a b)
-  ;;             f (tf/pow a b)
-  ;;             g (tf/sigmoid a)
-  ;;             h (tf/div a b)]
+  (deftest test-gradients
+    (with-graph
+      (with-session
+        (let [a (tf/constant 3.)
+              b (tf/constant 5.)
+              c (tf/add a b)
+              d (tf/sub b a)
+              e (tf/mul a b)
+              f (tf/pow a b)
+              g (tf/sigmoid a)
+              h (tf/div a b)]
 
-  ;;         (testing "Gradients"
-  ;;           (is (= (run (tf.gradients/gradients a a))
-  ;;                  (float 1.))))
+          (testing "Gradients"
+            (is (= (run (tf.gradients/gradients a a))
+                   (float 1.))))
 
-  ;;         (testing "Gradients"
-  ;;           (is (= (run (tf.gradients/gradients a a))
-  ;;                  (float 1.))))
+          (testing "Gradients"
+            (is (= (run (tf.gradients/gradients a a))
+                   (float 1.))))
 
-  ;;         (testing "Gradients sub"
-  ;;           (is (= (run (tf.gradients/gradients d a))
-  ;;                  (float -1.))))
+          (testing "Gradients sub"
+            (is (= (run (tf.gradients/gradients d a))
+                   (float -1.))))
 
-  ;;         (testing "Gradients add"
-  ;;           (is (= (run (tf.gradients/gradients c a))
-  ;;                  (float 1.))))
+          (testing "Gradients add"
+            (is (= (run (tf.gradients/gradients c a))
+                   (float 1.))))
 
-  ;;         (testing "Gradients mul"
-  ;;           (is (= (run (tf.gradients/gradients e a))
-  ;;                  (float 5.))))
+          (testing "Gradients mul"
+            (is (= (run (tf.gradients/gradients e a))
+                   (float 5.))))
 
-  ;;         (testing "Gradients mul"
-  ;;           (is (= (run (tf.gradients/gradients e b))
-  ;;                  (float 3.))))
+          (testing "Gradients mul"
+            (is (= (run (tf.gradients/gradients e b))
+                   (float 3.))))
 
-  ;;         (testing "Gradients div"
-  ;;           (is (= (run (tf.gradients/gradients h a))
-  ;;                  (float 0.2)))
-  ;;           (is (= (run (tf.gradients/gradients h b))
-  ;;                  (float -0.12))))
+          (testing "Gradients div"
+            (is (= (run (tf.gradients/gradients h a))
+                   (float 0.2)))
+            (is (= (run (tf.gradients/gradients h b))
+                   (float -0.12))))
 
-  ;;         (testing "Gradients pow"
-  ;;           (is (= (run (tf.gradients/gradients f a))
-  ;;                  (float 405.))))
+          (testing "Gradients pow"
+            (is (= (run (tf.gradients/gradients f a))
+                   (float 405.))))
 
-  ;;         (testing "Gradients pow"
-  ;;           (is (= (run (tf.gradients/gradients f b))
-  ;;                  (float 266.9628))))
-  ;;         (is (= (run (tf.gradients/gradients g a))
-  ;;                (float 0.045176655))))))))
+          (testing "Gradients pow"
+            (is (= (run (tf.gradients/gradients f b))
+                   (float 266.9628))))
+          (is (= (run (tf.gradients/gradients g a))
+                 (float 0.045176655))))))))
 
 
 (deftest test-basic-feed-forward-neural-network
