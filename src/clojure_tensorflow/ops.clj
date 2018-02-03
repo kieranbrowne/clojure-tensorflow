@@ -128,7 +128,7 @@
   (val-like [t v]
     (ad/add
      (ad/mul t (constant 0.))
-     (constant v))
+     (constant (float v)))
     )
   )
 ;; value ops
