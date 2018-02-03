@@ -14,9 +14,14 @@
 
 (def op-fns
   {:Mul ops/mul
+   :Div ops/div
    :Add ops/add
+   :Sub ops/sub
+   :Sigmoid ops/sigmoid
+   :Pow ops/pow
    })
-(def get-op-fn (comp op-fns keyword :operation get-node))
+(def get-op-fn (comp #(or (get op-fns (keyword %)) (throw (ex-info (str "No gradient is defined for operation: " (name %)) {:op %}))) keyword :operation get-node))
+
 
 (def get-op-inputs (comp :inputs get-node))
 

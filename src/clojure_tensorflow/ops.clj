@@ -65,7 +65,7 @@
   `(do ~@(for [i vlist]
            `(def ~i ~(symbol (str ns "/" i))))))
 
-(pull autodiff.protocols (mul add sub sigmoid negate))
+;; (pull autodiff.protocols (mul add sub sigmoid negate))
 
 (defn constant
   ([val name]
@@ -103,11 +103,17 @@
         :inputs [a b]})
       (ad/mul (ad/coerce a) (ad/coerce b))
       ))
+  (div [a b]
+    (if (and (keyword? a) (keyword? b))
+      (add-shadow-op
+       {:operation "Div"
+        :inputs [a b]})
+      (ad/div (ad/coerce a) (ad/coerce b))
+      ))
   (sigmoid [a]
     (add-shadow-op
      {:operation "Sigmoid"
-      :inputs [a]
-      :ad-fn :sigmoid}))
+      :inputs [a]}))
   (negate [a]
     (add-shadow-op
      {:operation "Neg"
@@ -115,10 +121,22 @@
       :ad-fn :negate}))
 
   (sub [a b]
+    (if (and (keyword? a) (keyword? b))
+      (add-shadow-op
+       {:operation "Sub"
+        :inputs [a b]})
+      (ad/sub (ad/coerce a) (ad/coerce b))))
+
+  (pow [a b]
+    (if (and (keyword? a) (keyword? b))
+      (add-shadow-op
+       {:operation "Pow"
+        :inputs [a b]})
+      (ad/pow (ad/coerce a) (ad/coerce b))))
+  (log [a]
     (add-shadow-op
-     {:operation "Sub"
-      :inputs [a b]
-      :ad-fn :sub}))
+     {:operation "Log"
+      :inputs [a]}))
 
   (val-of-type [t v]
     (case v
@@ -172,12 +190,6 @@
 
 
 ;; math ops
-
-
-(defn div [a b]
-  (add-shadow-op
-   {:operation "Div"
-    :inputs [a b]}))
 
 
 
@@ -245,19 +257,6 @@
   (add-shadow-op
    {:operation "Concat"
     :inputs [tensors axis]}))
-
-
-(defn pow [a b]
-  (add-shadow-op
-   {:operation "Pow"
-    :inputs [a b]}))
-
-(def square #(pow % (constant 2.)))
-
-(defn log [a]
-  (add-shadow-op
-   {:operation "Log"
-    :inputs [a]}))
 
 (defn size [a]
   (add-shadow-op
@@ -349,7 +348,7 @@
     {:operation "OneHot"
      :inputs [(to-int32 indices) (to-int32 depth) on-value off-value]}))
   ([indices depth] (one-hot indices depth (constant 1) (constant 0)))
-  ([indices] (one-hot indices (add (constant 1) (to-int32 (reduce-max indices))) (constant 1) (constant 0)))
+  ([indices] (one-hot indices (ad/add (constant 1) (to-int32 (reduce-max indices))) (constant 1) (constant 0)))
   )
 
 (defn random-normal
@@ -361,4 +360,24 @@
               (reverse shape)))))
   ([shape] (random-normal shape 0.35)))
 
-(pull autodiff.protocols (mul add sub sigmoid negate))
+(pull autodiff.protocols (negate))
+
+(defn auto-convert [x] (if (keyword? x) x (constant x)))
+(defn check-args [& args] (map #(if (or (keyword? %) (ad/dual? %)) % (constant %)) args))
+(defn applicative [fn] (partial apply fn))
+
+(defn mul [a b]
+  (apply ad/mul (map auto-convert [a b]))
+  )
+
+;; (defn add [a b]
+;;   (apply ad/mul (map auto-convert [a b]))
+;;   )
+
+(def add (comp (applicative ad/add) check-args))
+(def sub (comp (applicative ad/sub) check-args))
+(def mul (comp (applicative ad/mul) check-args))
+(def div (comp (applicative ad/div) check-args))
+(def sigmoid (comp (applicative ad/sigmoid) check-args))
+(def pow (comp (applicative ad/pow) check-args))
+(def square #(pow % (constant 2.)))

@@ -84,8 +84,9 @@
   org.tensorflow.Operation
   [o] o)
 
+;; (derive Object ::any)
 (defmethod build-op ;; fallback
-  ::any
+  Object ;; any
   [o]
   (build-op
    (graph/add-shadow-op

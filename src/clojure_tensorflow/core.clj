@@ -80,7 +80,6 @@
        (finally (.close session)))))
 
 
-(utils/clj->tensor [3.0])
 (with-this-graph
   (->
    {:x {:operation :Placeholder
@@ -102,8 +101,7 @@
   ;; (grad/path :x :y)
   (with-session
     (run
-      (ad/coerce
-       (tf/constant 20.3))
+      (tf/add 1 3)
       ))
   ;; (with-session
   ;;   (run :z {:x 2.}))

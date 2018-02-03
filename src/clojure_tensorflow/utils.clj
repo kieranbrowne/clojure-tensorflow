@@ -67,7 +67,7 @@
               (println (class v))
               (float 0))
           ))
-    (int? v) (float v)
+    (int? v) (int v)
     (number? v) (float v)
     ;; anything else
     :default v))
