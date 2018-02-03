@@ -4,7 +4,8 @@
     :refer [graph global-variables shadow-graph shadow-graph']]
    [clojure-tensorflow.utils :as utils]
    [autodiff.protocols :as ad]
-   )
+
+   [clojure-tensorflow.graph :as graph])
   (:import [autodiff.protocols.Dual]))
 
 
@@ -75,9 +76,20 @@
       (update :f build-op)
       (update :f' build-op)))
 
+
 (defmethod build-op
   org.tensorflow.Output
   [o] o)
 (defmethod build-op
   org.tensorflow.Operation
   [o] o)
+
+(defmethod build-op ;; fallback
+  ::any
+  [o]
+  (build-op
+   (graph/add-shadow-op
+    {:operation "Const"
+     :attrs {:dtype (.dataType (utils/clj->tensor o))
+             :value (utils/clj->tensor o)
+             }})))

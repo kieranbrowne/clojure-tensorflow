@@ -2,7 +2,7 @@
   (:refer-clojure :exclude [cast concat identity])
   (:require
    [clojure-tensorflow.build :as build :refer [op-builder]]
-   [clojure-tensorflow.graph :as graph]
+   [clojure-tensorflow.graph :as graph :refer [add-shadow-op]]
    [clojure-tensorflow.utils :as utils]
    [autodiff.protocols :as ad]
    [autodiff.core :refer [extend-types]]
@@ -60,31 +60,6 @@
   (keyword (str "d" (name y) "/d" (name x))))
 
 
-(s/fdef add-shadow-op
-        :args (s/cat :op-def ::op-def :op-name ::op-name)
-        :ret ::op-name)
-
-(defn add-shadow-op
-  "Coerce op-def, add to shadow graph and return its key"
-  ([op-def op-name]
-   ;{:pre [(s/valid? ::op-def op-def) (s/valid? ::op-name op-name)]
-    ;:post [(s/valid? ::op-name %)]}
-   (when-not (contains? @graph/shadow-graph op-name)
-     ;; (swap! graph/shadow-graph' assoc (prime op-name)
-     ;;        (ad/coerce op-name 1))
-     (swap! graph/shadow-graph' assoc op-name op-def))
-         op-name)
-  ([op-def] (add-shadow-op op-def (keyword (gensym (:operation op-def)))))
-  )
-
-
-;; (defn coerce [x f']
-;;   (let [dual (ad/coerce x f')])
-;;   (swap! graph/shadow-graph' assoc (prime (:f dual)) )
-;;   )
-
-
-;; (clojure.core/refer 'autodiff.protocols :rename {'constant 'const})
 
 (defmacro pull [ns vlist]
   `(do ~@(for [i vlist]
@@ -152,7 +127,7 @@
       (constant v)))
   (val-like [t v]
     (ad/add
-     (ad/mul t (constant 0))
+     (ad/mul t (constant 0.))
      (constant v))
     )
   )

@@ -48,12 +48,13 @@
   (cond
     (= (class v) autodiff.protocols.Dual)
     (do (println "its a dual")
-        (.op(:f v)))
+        (.op (:f v)))
 
     (coll? v)
       (if (coll? (first v))
         (to-array (map tf-vals v))
         (cond
+          (int? (first v)) (int-array v)
           (number? (first v)) (float-array v)
 
           (= (class (first v)) org.tensorflow.Output) v
@@ -66,9 +67,11 @@
               (println (class v))
               (float 0))
           ))
+    (int? v) (float v)
     (number? v) (float v)
     ;; anything else
     :default v))
+
 
 
 (defn output-shape [tensor]

@@ -496,6 +496,13 @@
                      )))))
       )))
 
+;; (run
+;;   (tf/reshape
+;;    (range 9)
+;;    '(3 3)
+;;    )
+;;   )
+
 (run (tf/add (tf/constant 2.)
              (ad/coerce (tf/constant 4.))))
 
@@ -515,7 +522,7 @@
                  )))
 
         (testing "Derivative of a constant"
-          (is (= 0. (run (ad/d ad/constant 20.4)))))
+          (is (= 0. (run (:f' (ad/coerce (tf/constant 20.4)))))))
 
         (testing "Derivative of addition"
           (is (= 1. (run (ad/d ad/add

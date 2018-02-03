@@ -17,6 +17,7 @@
   "Feed value to placeholder
   Pass a map of locations to values"
   ([runner feed-map]
+   (doall (map build/build-op (keys feed-map)))
    (utils/thread
      runner
      (map (fn [[key val]]
@@ -79,16 +80,16 @@
        (finally (.close session)))))
 
 
-
+(utils/clj->tensor [3.0])
 (with-this-graph
   (->
-   {:x {:operation :Const
-        :attrs {:dtype (.dataType (utils/clj->tensor [3]))
-                :value (utils/clj->tensor [3])
+   {:x {:operation :Placeholder
+        :attrs {:dtype (.dataType (utils/clj->tensor [3.0]))
+                ;; :value (utils/clj->tensor [3])
                 }}
     :y {:operation :Const
-        :attrs {:dtype (.dataType (utils/clj->tensor 2))
-                :value (utils/clj->tensor [2])
+        :attrs {:dtype (.dataType (utils/clj->tensor [2.]))
+                :value (utils/clj->tensor [2.])
                 }}
     :z {:operation :Mul :inputs [:x :y]}
     :a {:operation :Mul :inputs [:x :z]}
@@ -99,12 +100,15 @@
   ;;   (run (gradient :a :y)))
 
   ;; (grad/path :x :y)
+  (with-session
+    (run
+      (ad/coerce
+       (tf/constant 20.3))
+      ))
   ;; (with-session
-  ;;   (run
-  ;;     (grad/gradient :z :y)
-  ;;     ))
+  ;;   (run :z {:x 2.}))
   ;; (with-session
-  ;;   (run (gradient :z :y)))
+  ;;   (run :z {:x [1.]}))
 
   ;; ((grad/ancestors :z) :y)
 

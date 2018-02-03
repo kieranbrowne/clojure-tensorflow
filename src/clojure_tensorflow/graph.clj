@@ -11,3 +11,12 @@
 ;; from the java graph / operations objects.
 (def ^:dynamic shadow-graph (atom []))
 (def ^:dynamic shadow-graph' (atom {}))
+
+(defn add-shadow-op
+  "Coerce op-def, add to shadow graph and return its key"
+  ([op-def op-name]
+   (when-not (contains? @shadow-graph' op-name)
+     (swap! shadow-graph' assoc op-name op-def))
+   op-name)
+  ([op-def] (add-shadow-op op-def (keyword (gensym (:operation op-def)))))
+  )
