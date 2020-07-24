@@ -1,4 +1,12 @@
+
+*This project is achived, thanks to all who took part*
+
+There are now many better supported solutions to doing machine learning via clojure.
+And a library is still not necessary to use tensorflow from clojure due to its firstclass interop, see [my blog post on the topic](https://kieranbrowne.com/research/clojure-tensorflow-interop/).
+
 # Clojure and TensorFlow
+
+
 
 A light layer of wrappers over Java interop for working with TensorFlow.
 
