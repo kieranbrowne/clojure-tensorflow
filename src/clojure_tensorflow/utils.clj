@@ -43,7 +43,7 @@
   (cond
     (coll? v)
     (if (coll? (first v))
-      (to-array (map tf-vals v))
+      (into-array (map tf-vals v))
       (case (.getName (type (first v)))
         "java.lang.Long" (int-array v)
         "java.lang.Int" (int-array v)
